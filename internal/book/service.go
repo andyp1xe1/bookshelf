@@ -9,6 +9,15 @@ import (
 	"go-openapi/internal/book/store"
 )
 
+type Store interface {
+	CreateBook(ctx context.Context, arg store.CreateBookParams) (store.Book, error)
+	GetBook(ctx context.Context, id int64) (store.Book, error)
+	UpdateBook(ctx context.Context, arg store.UpdateBookParams) (store.Book, error)
+	DeleteBook(ctx context.Context, id int64) (int64, error)
+	ListBooks(ctx context.Context, arg store.ListBooksParams) ([]store.Book, error)
+	SearchBooks(ctx context.Context, arg store.SearchBooksParams) ([]store.Book, error)
+}
+
 type BookService struct {
 	books *store.Queries
 }
