@@ -1,0 +1,9 @@
+package: api
+generate:
+  fiber-server: true
+  strict-server: true
+  models: true
+# optional but common:
+# output-options:
+#   skip-prune: true
+output: internal/book/api/api.gen.go
