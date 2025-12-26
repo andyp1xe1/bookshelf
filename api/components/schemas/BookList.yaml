@@ -1,0 +1,12 @@
+type: object
+required:
+  - items
+  - total
+properties:
+  items:
+    type: array
+    items:
+      $ref: ./Book.yaml
+  total:
+    type: integer
+    format: int64

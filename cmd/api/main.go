@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/jackc/pgx/v5"
 	"github.com/joho/godotenv"
 )
@@ -34,6 +35,7 @@ func main() {
 	defer conn.Close(ctx)
 
 	app := fiber.New()
+	app.Use(cors.New())
 	store := store.New(conn)
 	service := services.NewBookService(store)
 	handler := handlers.NewBookHandler(service)

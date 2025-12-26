@@ -1,0 +1,7 @@
+name: bookID
+in: path
+required: true
+description: id of the book
+schema:
+  type: integer
+  format: int64

@@ -1,0 +1,17 @@
+type: object
+required:
+  - title
+  - author
+  - publishedYear
+  - isbn
+properties:
+  title:
+    type: string
+  author:
+    type: string
+  publishedYear:
+    type: string
+  isbn:
+    type: string
+  genre:
+    type: string

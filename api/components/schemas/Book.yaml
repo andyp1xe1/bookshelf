@@ -1,0 +1,21 @@
+type: object
+required:
+  - id
+  - title
+  - author
+  - publishedYear
+  - isbn
+properties:
+  id:
+    type: integer
+    format: int64
+  title:
+    type: string
+  author:
+    type: string
+  publishedYear:
+    type: string
+  isbn:
+    type: string
+  genre:
+    type: string

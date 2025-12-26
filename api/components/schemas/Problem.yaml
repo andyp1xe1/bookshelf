@@ -1,0 +1,16 @@
+type: object
+required:
+  - title
+  - status
+properties:
+  type:
+    type: string
+    format: uri
+  title:
+    type: string
+  status:
+    type: integer
+  detail:
+    type: string
+  instance:
+    type: string
