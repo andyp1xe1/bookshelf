@@ -2,21 +2,22 @@ package main
 
 import (
 	"context"
+	"go-openapi/internal/api"
+	"go-openapi/internal/handlers"
+	"go-openapi/internal/services"
+	"go-openapi/internal/store"
 	"log"
 	"os"
 
-	"go-openapi/internal/book"
-	"go-openapi/internal/book/api"
-	"go-openapi/internal/book/store"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	// if err := godotenv.Load(); err != nil {
-	// 	log.Printf(".env not loaded: %v", err)
-	// }
+	if err := godotenv.Load(); err != nil {
+		log.Printf(".env not loaded: %v", err)
+	}
 
 	ctx := context.Background()
 
@@ -34,8 +35,8 @@ func main() {
 
 	app := fiber.New()
 	store := store.New(conn)
-	service := book.NewBookService(store)
-	handler := book.NewBookHandler(service)
+	service := services.NewBookService(store)
+	handler := handlers.NewBookHandler(service)
 	si := api.NewStrictHandler(handler, nil)
 
 	api.RegisterHandlers(app, si)

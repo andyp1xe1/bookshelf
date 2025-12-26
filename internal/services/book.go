@@ -1,15 +1,15 @@
-package book
+package services
 
 import (
 	"context"
 	"fmt"
 	"strconv"
 
-	"go-openapi/internal/book/api"
-	"go-openapi/internal/book/store"
+	"go-openapi/internal/api"
+	"go-openapi/internal/store"
 )
 
-type Store interface {
+type BookStore interface {
 	CreateBook(ctx context.Context, arg store.CreateBookParams) (store.Book, error)
 	GetBook(ctx context.Context, id int64) (store.Book, error)
 	UpdateBook(ctx context.Context, arg store.UpdateBookParams) (store.Book, error)
@@ -19,12 +19,12 @@ type Store interface {
 }
 
 type BookService struct {
-	books *store.Queries
+	books BookStore
 }
 
-func NewBookService(repo *store.Queries) *BookService {
+func NewBookService(store BookStore) *BookService {
 	return &BookService{
-		books: repo,
+		books: store,
 	}
 }
 

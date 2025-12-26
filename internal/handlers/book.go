@@ -1,10 +1,10 @@
-// Package book implements book metadata handling.
-package book
+// Package handlers implements HTTP handlers for book-related operations.
+package handlers
 
 import (
 	"context"
 
-	"go-openapi/internal/book/api"
+	"go-openapi/internal/api"
 )
 
 type Service interface {

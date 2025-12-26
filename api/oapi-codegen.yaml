@@ -6,4 +6,4 @@ generate:
 # optional but common:
 # output-options:
 #   skip-prune: true
-output: internal/book/api/api.gen.go
+output: internal/api/api.gen.go
