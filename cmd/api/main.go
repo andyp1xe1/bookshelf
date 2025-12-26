@@ -12,7 +12,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 )
 
@@ -28,16 +28,16 @@ func main() {
 		log.Fatal("DATABASE_URL is required")
 	}
 
-	conn, err := pgx.Connect(ctx, dbURL)
+	pool, err := pgxpool.New(ctx, dbURL)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	defer conn.Close(ctx)
+	defer pool.Close()
 
 	app := fiber.New()
 	app.Use(cors.New())
-	store := store.New(conn)
+	store := store.New(pool)
 	service := services.NewBookService(store)
 	handler := handlers.NewBookHandler(service)
 	si := api.NewStrictHandler(handler, nil)
