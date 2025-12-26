@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: go-openapi-api
+    runtime: go
+    buildCommand: go build -o bin/api ./cmd/api
+    startCommand: ./bin/api
+  - type: web
+    name: go-openapi-spa
+    runtime: static
+    rootDir: web
+    buildCommand: bun install && bun run build
+    staticPublishPath: dist
