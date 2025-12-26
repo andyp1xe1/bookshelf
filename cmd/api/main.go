@@ -8,6 +8,7 @@ import (
 	"go-openapi/internal/store"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -43,5 +44,11 @@ func main() {
 
 	api.RegisterHandlers(app, si)
 
-	log.Fatal(app.Listen("0.0.0.0:8080"))
+	var port string
+	if port = os.Getenv("PORT"); strings.Compare(port, "") == 0 {
+		port = "8080"
+	}
+
+	url := "0.0.0.0:" + port
+	log.Fatal(app.Listen(url))
 }
