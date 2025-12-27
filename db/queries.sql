@@ -54,3 +54,68 @@ LIMIT $2 OFFSET $3;
 SELECT count(*)::bigint AS total
 FROM books
 WHERE title ILIKE '%' || $1 || '%' OR author ILIKE '%' || $1 || '%';
+
+-- name: CreateDocument :one
+INSERT INTO documents (
+  book_id,
+  filename,
+  object_key,
+  content_type,
+  size_bytes,
+  status,
+  checksum
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6,
+  $7
+)
+RETURNING id, book_id, filename, object_key, content_type, size_bytes, status, checksum, created_at, updated_at;
+
+-- name: GetDocument :one
+SELECT id, book_id, filename, object_key, content_type, size_bytes, status, checksum, created_at, updated_at
+FROM documents
+WHERE id = $1;
+
+-- name: UpdateDocumentStatus :one
+UPDATE documents
+SET status = $2,
+    updated_at = now()
+WHERE id = $1
+RETURNING id, book_id, filename, object_key, content_type, size_bytes, status, checksum, created_at, updated_at;
+
+-- name: DeleteDocument :execrows
+DELETE FROM documents
+WHERE id = $1;
+
+-- name: ListDocumentsByBook :many
+SELECT id, book_id, filename, object_key, content_type, size_bytes, status, checksum, created_at, updated_at
+FROM documents
+WHERE book_id = $1
+ORDER BY id
+LIMIT $2 OFFSET $3;
+
+-- name: CountDocumentsByBook :one
+SELECT count(*)::bigint AS total
+FROM documents
+WHERE book_id = $1;
+
+-- name: GetDocumentByObjectKey :one
+SELECT id, book_id, filename, object_key, content_type, size_bytes, status, checksum, created_at, updated_at
+FROM documents
+WHERE object_key = $1;
+
+-- name: UpdateFullDocument :one
+UPDATE documents
+SET filename = $2,
+    object_key = $3,
+    content_type = $4,
+    size_bytes = $5,
+    status = $6,
+    checksum = $7,
+    updated_at = now()
+WHERE id = $1
+RETURNING id, book_id, filename, object_key, content_type, size_bytes, status, checksum, created_at, updated_at;

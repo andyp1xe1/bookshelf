@@ -1,0 +1,33 @@
+post:
+  operationId: createBookDocumentPresign
+  tags:
+    - documents
+  summary: Create a presigned upload URL for a document
+  description: Only authenticated uploaders can request a presigned URL.
+  parameters:
+    - $ref: ../components/parameters/BookID.yaml
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../components/schemas/DocumentUploadRequest.yaml
+  responses:
+    '201':
+      description: Presigned upload created
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/DocumentPresignResponse.yaml
+    '404':
+      description: Book not found
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/Problem.yaml
+    '422':
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/Problem.yaml

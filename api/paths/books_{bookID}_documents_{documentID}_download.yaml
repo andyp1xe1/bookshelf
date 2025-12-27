@@ -1,0 +1,24 @@
+get:
+  operationId: downloadBookDocument
+  tags:
+    - documents
+  summary: Download a document
+  description: Redirects to the public R2 object URL.
+  parameters:
+    - $ref: ../components/parameters/BookID.yaml
+    - $ref: ../components/parameters/DocumentID.yaml
+  responses:
+    '302':
+      description: Redirect to public download URL
+      headers:
+        Location:
+          description: Public R2 download URL
+          schema:
+            type: string
+            format: uri
+    '404':
+      description: Document not found
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/Problem.yaml

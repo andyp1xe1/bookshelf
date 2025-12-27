@@ -1,0 +1,36 @@
+type: object
+required:
+  - id
+  - bookID
+  - filename
+  - contentType
+  - sizeBytes
+  - status
+  - createdAt
+  - updatedAt
+properties:
+  id:
+    type: integer
+    format: int64
+  bookID:
+    type: integer
+    format: int64
+  filename:
+    type: string
+  contentType:
+    $ref: ./ContentType.yaml
+  sizeBytes:
+    type: integer
+    format: int64
+  status:
+    $ref: ./UploadStatus.yaml
+  objectKey:
+    type: string
+  checksumSha256:
+    type: string
+  createdAt:
+    type: string
+    format: date-time
+  updatedAt:
+    type: string
+    format: date-time

@@ -2,6 +2,10 @@ openapi: 3.0.0
 info:
   title: Book API
   version: 0.0.1
+servers:
+  - url: /
+    description: Default server
+security: []
 tags:
   - name: books
     description: Manage books
@@ -14,15 +18,13 @@ paths:
     $ref: paths/books_search.yaml
   /books/{bookID}:
     $ref: paths/books_{bookID}.yaml
-  /books/{bookID}documents:
-    post:
-      responses:
-        default:
-          description: "successful"
-      deprecated: false
-  /books/{bookID}documents/{documentID}:
-    delete:
-      responses:
-        default:
-          description: "successful"
-      deprecated: false
+  /books/{bookID}/documents:
+    $ref: paths/books_{bookID}_documents.yaml
+  /books/{bookID}/documents/presign:
+    $ref: paths/books_{bookID}_documents_presign.yaml
+  /books/{bookID}/documents/{documentID}:
+    $ref: paths/books_{bookID}_documents_{documentID}.yaml
+  /books/{bookID}/documents/{documentID}/complete:
+    $ref: paths/books_{bookID}_documents_{documentID}_complete.yaml
+  /books/{bookID}/documents/{documentID}/download:
+    $ref: paths/books_{bookID}_documents_{documentID}_download.yaml

@@ -1,0 +1,35 @@
+get:
+  operationId: listBookDocuments
+  tags:
+    - documents
+  summary: List documents for a book
+  parameters:
+    - $ref: ../components/parameters/BookID.yaml
+    - in: query
+      name: limit
+      schema:
+        type: integer
+        format: int32
+        default: 20
+        minimum: 1
+        maximum: 100
+    - in: query
+      name: offset
+      schema:
+        type: integer
+        format: int32
+        default: 0
+        minimum: 0
+  responses:
+    '200':
+      description: Successful response
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/DocumentList.yaml
+    '404':
+      description: Book not found
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/Problem.yaml

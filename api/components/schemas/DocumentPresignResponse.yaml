@@ -1,0 +1,27 @@
+type: object
+required:
+  - document
+  - uploadUrl
+  - uploadMethod
+  - headers
+  - expiresAt
+  - objectKey
+properties:
+  document:
+    $ref: ./Document.yaml
+  uploadUrl:
+    type: string
+    format: uri
+  uploadMethod:
+    type: string
+    enum:
+      - POST
+  headers:
+    type: object
+    additionalProperties:
+      type: string
+  expiresAt:
+    type: string
+    format: date-time
+  objectKey:
+    type: string

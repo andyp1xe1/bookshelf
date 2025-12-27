@@ -34,6 +34,19 @@ func (q *Queries) CountBooksBySearch(ctx context.Context, dollar_1 *string) (int
 	return total, err
 }
 
+const countDocumentsByBook = `-- name: CountDocumentsByBook :one
+SELECT count(*)::bigint AS total
+FROM documents
+WHERE book_id = $1
+`
+
+func (q *Queries) CountDocumentsByBook(ctx context.Context, bookID *int64) (int64, error) {
+	row := q.db.QueryRow(ctx, countDocumentsByBook, bookID)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
 const createBook = `-- name: CreateBook :one
 INSERT INTO books (
   title,
@@ -80,6 +93,63 @@ func (q *Queries) CreateBook(ctx context.Context, arg CreateBookParams) (Book, e
 	return i, err
 }
 
+const createDocument = `-- name: CreateDocument :one
+INSERT INTO documents (
+  book_id,
+  filename,
+  object_key,
+  content_type,
+  size_bytes,
+  status,
+  checksum
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6,
+  $7
+)
+RETURNING id, book_id, filename, object_key, content_type, size_bytes, status, checksum, created_at, updated_at
+`
+
+type CreateDocumentParams struct {
+	BookID      *int64 `json:"book_id"`
+	Filename    string `json:"filename"`
+	ObjectKey   string `json:"object_key"`
+	ContentType string `json:"content_type"`
+	SizeBytes   int32  `json:"size_bytes"`
+	Status      string `json:"status"`
+	Checksum    string `json:"checksum"`
+}
+
+func (q *Queries) CreateDocument(ctx context.Context, arg CreateDocumentParams) (Document, error) {
+	row := q.db.QueryRow(ctx, createDocument,
+		arg.BookID,
+		arg.Filename,
+		arg.ObjectKey,
+		arg.ContentType,
+		arg.SizeBytes,
+		arg.Status,
+		arg.Checksum,
+	)
+	var i Document
+	err := row.Scan(
+		&i.ID,
+		&i.BookID,
+		&i.Filename,
+		&i.ObjectKey,
+		&i.ContentType,
+		&i.SizeBytes,
+		&i.Status,
+		&i.Checksum,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const deleteBook = `-- name: DeleteBook :execrows
 DELETE FROM books
 WHERE id = $1
@@ -87,6 +157,19 @@ WHERE id = $1
 
 func (q *Queries) DeleteBook(ctx context.Context, id int64) (int64, error) {
 	result, err := q.db.Exec(ctx, deleteBook, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteDocument = `-- name: DeleteDocument :execrows
+DELETE FROM documents
+WHERE id = $1
+`
+
+func (q *Queries) DeleteDocument(ctx context.Context, id int64) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteDocument, id)
 	if err != nil {
 		return 0, err
 	}
@@ -110,6 +193,54 @@ func (q *Queries) GetBook(ctx context.Context, id int64) (Book, error) {
 		&i.Isbn,
 		&i.Genre,
 		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getDocument = `-- name: GetDocument :one
+SELECT id, book_id, filename, object_key, content_type, size_bytes, status, checksum, created_at, updated_at
+FROM documents
+WHERE id = $1
+`
+
+func (q *Queries) GetDocument(ctx context.Context, id int64) (Document, error) {
+	row := q.db.QueryRow(ctx, getDocument, id)
+	var i Document
+	err := row.Scan(
+		&i.ID,
+		&i.BookID,
+		&i.Filename,
+		&i.ObjectKey,
+		&i.ContentType,
+		&i.SizeBytes,
+		&i.Status,
+		&i.Checksum,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getDocumentByObjectKey = `-- name: GetDocumentByObjectKey :one
+SELECT id, book_id, filename, object_key, content_type, size_bytes, status, checksum, created_at, updated_at
+FROM documents
+WHERE object_key = $1
+`
+
+func (q *Queries) GetDocumentByObjectKey(ctx context.Context, objectKey string) (Document, error) {
+	row := q.db.QueryRow(ctx, getDocumentByObjectKey, objectKey)
+	var i Document
+	err := row.Scan(
+		&i.ID,
+		&i.BookID,
+		&i.Filename,
+		&i.ObjectKey,
+		&i.ContentType,
+		&i.SizeBytes,
+		&i.Status,
+		&i.Checksum,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -143,6 +274,51 @@ func (q *Queries) ListBooks(ctx context.Context, arg ListBooksParams) ([]Book, e
 			&i.Isbn,
 			&i.Genre,
 			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDocumentsByBook = `-- name: ListDocumentsByBook :many
+SELECT id, book_id, filename, object_key, content_type, size_bytes, status, checksum, created_at, updated_at
+FROM documents
+WHERE book_id = $1
+ORDER BY id
+LIMIT $2 OFFSET $3
+`
+
+type ListDocumentsByBookParams struct {
+	BookID *int64 `json:"book_id"`
+	Limit  int32  `json:"limit"`
+	Offset int32  `json:"offset"`
+}
+
+func (q *Queries) ListDocumentsByBook(ctx context.Context, arg ListDocumentsByBookParams) ([]Document, error) {
+	rows, err := q.db.Query(ctx, listDocumentsByBook, arg.BookID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Document
+	for rows.Next() {
+		var i Document
+		if err := rows.Scan(
+			&i.ID,
+			&i.BookID,
+			&i.Filename,
+			&i.ObjectKey,
+			&i.ContentType,
+			&i.SizeBytes,
+			&i.Status,
+			&i.Checksum,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -234,6 +410,86 @@ func (q *Queries) UpdateBook(ctx context.Context, arg UpdateBookParams) (Book, e
 		&i.Isbn,
 		&i.Genre,
 		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateDocumentStatus = `-- name: UpdateDocumentStatus :one
+UPDATE documents
+SET status = $2,
+    updated_at = now()
+WHERE id = $1
+RETURNING id, book_id, filename, object_key, content_type, size_bytes, status, checksum, created_at, updated_at
+`
+
+type UpdateDocumentStatusParams struct {
+	ID     int64  `json:"id"`
+	Status string `json:"status"`
+}
+
+func (q *Queries) UpdateDocumentStatus(ctx context.Context, arg UpdateDocumentStatusParams) (Document, error) {
+	row := q.db.QueryRow(ctx, updateDocumentStatus, arg.ID, arg.Status)
+	var i Document
+	err := row.Scan(
+		&i.ID,
+		&i.BookID,
+		&i.Filename,
+		&i.ObjectKey,
+		&i.ContentType,
+		&i.SizeBytes,
+		&i.Status,
+		&i.Checksum,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateFullDocument = `-- name: UpdateFullDocument :one
+UPDATE documents
+SET filename = $2,
+    object_key = $3,
+    content_type = $4,
+    size_bytes = $5,
+    status = $6,
+    checksum = $7,
+    updated_at = now()
+WHERE id = $1
+RETURNING id, book_id, filename, object_key, content_type, size_bytes, status, checksum, created_at, updated_at
+`
+
+type UpdateFullDocumentParams struct {
+	ID          int64  `json:"id"`
+	Filename    string `json:"filename"`
+	ObjectKey   string `json:"object_key"`
+	ContentType string `json:"content_type"`
+	SizeBytes   int32  `json:"size_bytes"`
+	Status      string `json:"status"`
+	Checksum    string `json:"checksum"`
+}
+
+func (q *Queries) UpdateFullDocument(ctx context.Context, arg UpdateFullDocumentParams) (Document, error) {
+	row := q.db.QueryRow(ctx, updateFullDocument,
+		arg.ID,
+		arg.Filename,
+		arg.ObjectKey,
+		arg.ContentType,
+		arg.SizeBytes,
+		arg.Status,
+		arg.Checksum,
+	)
+	var i Document
+	err := row.Scan(
+		&i.ID,
+		&i.BookID,
+		&i.Filename,
+		&i.ObjectKey,
+		&i.ContentType,
+		&i.SizeBytes,
+		&i.Status,
+		&i.Checksum,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }

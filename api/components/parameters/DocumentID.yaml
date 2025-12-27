@@ -1,0 +1,7 @@
+name: documentID
+in: path
+required: true
+description: id of the document
+schema:
+  type: integer
+  format: int64

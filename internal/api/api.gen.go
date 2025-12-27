@@ -7,9 +7,30 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/oapi-codegen/runtime"
+)
+
+// Defines values for ContentType.
+const (
+	ApplicationepubZip ContentType = "application/epub+zip"
+	Applicationpdf     ContentType = "application/pdf"
+)
+
+// Defines values for DocumentPresignResponseUploadMethod.
+const (
+	POST DocumentPresignResponseUploadMethod = "POST"
+)
+
+// Defines values for UploadStatus.
+const (
+	Failed     UploadStatus = "failed"
+	Pending    UploadStatus = "pending"
+	Processing UploadStatus = "processing"
+	Ready      UploadStatus = "ready"
+	Uploaded   UploadStatus = "uploaded"
 )
 
 // Book defines model for Book.
@@ -46,6 +67,58 @@ type BookUpdate struct {
 	Title         string  `json:"title"`
 }
 
+// ContentType defines model for ContentType.
+type ContentType string
+
+// Document defines model for Document.
+type Document struct {
+	BookID         int64        `json:"bookID"`
+	ChecksumSha256 *string      `json:"checksumSha256,omitempty"`
+	ContentType    ContentType  `json:"contentType"`
+	CreatedAt      time.Time    `json:"createdAt"`
+	Filename       string       `json:"filename"`
+	Id             int64        `json:"id"`
+	ObjectKey      *string      `json:"objectKey,omitempty"`
+	SizeBytes      int64        `json:"sizeBytes"`
+	Status         UploadStatus `json:"status"`
+	UpdatedAt      time.Time    `json:"updatedAt"`
+}
+
+// DocumentCompleteRequest defines model for DocumentCompleteRequest.
+type DocumentCompleteRequest struct {
+	ChecksumSha256 *string     `json:"checksumSha256,omitempty"`
+	ContentType    ContentType `json:"contentType"`
+	SizeBytes      int64       `json:"sizeBytes"`
+}
+
+// DocumentList defines model for DocumentList.
+type DocumentList struct {
+	Items []Document `json:"items"`
+	Total int64      `json:"total"`
+}
+
+// DocumentPresignResponse defines model for DocumentPresignResponse.
+type DocumentPresignResponse struct {
+	Document     Document                            `json:"document"`
+	ExpiresAt    time.Time                           `json:"expiresAt"`
+	Headers      map[string]string                   `json:"headers"`
+	ObjectKey    string                              `json:"objectKey"`
+	UploadMethod DocumentPresignResponseUploadMethod `json:"uploadMethod"`
+	UploadUrl    string                              `json:"uploadUrl"`
+}
+
+// DocumentPresignResponseUploadMethod defines model for DocumentPresignResponse.UploadMethod.
+type DocumentPresignResponseUploadMethod string
+
+// DocumentUploadRequest defines model for DocumentUploadRequest.
+type DocumentUploadRequest struct {
+	ChecksumSha256 *string            `json:"checksumSha256,omitempty"`
+	ContentType    ContentType        `json:"contentType"`
+	Filename       string             `json:"filename"`
+	Metadata       *map[string]string `json:"metadata,omitempty"`
+	SizeBytes      int64              `json:"sizeBytes"`
+}
+
 // Problem defines model for Problem.
 type Problem struct {
 	Detail   *string `json:"detail,omitempty"`
@@ -55,8 +128,14 @@ type Problem struct {
 	Type     *string `json:"type,omitempty"`
 }
 
+// UploadStatus defines model for UploadStatus.
+type UploadStatus string
+
 // BookID defines model for BookID.
 type BookID = int64
+
+// DocumentID defines model for DocumentID.
+type DocumentID = int64
 
 // ListBooksParams defines parameters for ListBooks.
 type ListBooksParams struct {
@@ -71,11 +150,23 @@ type SearchBooksParams struct {
 	Offset *int32 `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
+// ListBookDocumentsParams defines parameters for ListBookDocuments.
+type ListBookDocumentsParams struct {
+	Limit  *int32 `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int32 `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
 // CreateBookJSONRequestBody defines body for CreateBook for application/json ContentType.
 type CreateBookJSONRequestBody = BookCreate
 
 // UpdateBookJSONRequestBody defines body for UpdateBook for application/json ContentType.
 type UpdateBookJSONRequestBody = BookUpdate
+
+// CreateBookDocumentPresignJSONRequestBody defines body for CreateBookDocumentPresign for application/json ContentType.
+type CreateBookDocumentPresignJSONRequestBody = DocumentUploadRequest
+
+// CompleteBookDocumentUploadJSONRequestBody defines body for CompleteBookDocumentUpload for application/json ContentType.
+type CompleteBookDocumentUploadJSONRequestBody = DocumentCompleteRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -97,6 +188,24 @@ type ServerInterface interface {
 	// Replace a book by id
 	// (PUT /books/{bookID})
 	UpdateBook(c *fiber.Ctx, bookID BookID) error
+	// List documents for a book
+	// (GET /books/{bookID}/documents)
+	ListBookDocuments(c *fiber.Ctx, bookID BookID, params ListBookDocumentsParams) error
+	// Create a presigned upload URL for a document
+	// (POST /books/{bookID}/documents/presign)
+	CreateBookDocumentPresign(c *fiber.Ctx, bookID BookID) error
+	// Delete a document
+	// (DELETE /books/{bookID}/documents/{documentID})
+	DeleteBookDocumentByID(c *fiber.Ctx, bookID BookID, documentID DocumentID) error
+	// Get document metadata
+	// (GET /books/{bookID}/documents/{documentID})
+	GetBookDocumentByID(c *fiber.Ctx, bookID BookID, documentID DocumentID) error
+	// Confirm document upload and persist metadata
+	// (POST /books/{bookID}/documents/{documentID}/complete)
+	CompleteBookDocumentUpload(c *fiber.Ctx, bookID BookID, documentID DocumentID) error
+	// Download a document
+	// (GET /books/{bookID}/documents/{documentID}/download)
+	DownloadBookDocument(c *fiber.Ctx, bookID BookID, documentID DocumentID) error
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -237,6 +346,157 @@ func (siw *ServerInterfaceWrapper) UpdateBook(c *fiber.Ctx) error {
 	return siw.Handler.UpdateBook(c, bookID)
 }
 
+// ListBookDocuments operation middleware
+func (siw *ServerInterfaceWrapper) ListBookDocuments(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "bookID" -------------
+	var bookID BookID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bookID", c.Params("bookID"), &bookID, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter bookID: %w", err).Error())
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListBookDocumentsParams
+
+	var query url.Values
+	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", query, &params.Limit)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter limit: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "offset", query, &params.Offset)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter offset: %w", err).Error())
+	}
+
+	return siw.Handler.ListBookDocuments(c, bookID, params)
+}
+
+// CreateBookDocumentPresign operation middleware
+func (siw *ServerInterfaceWrapper) CreateBookDocumentPresign(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "bookID" -------------
+	var bookID BookID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bookID", c.Params("bookID"), &bookID, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter bookID: %w", err).Error())
+	}
+
+	return siw.Handler.CreateBookDocumentPresign(c, bookID)
+}
+
+// DeleteBookDocumentByID operation middleware
+func (siw *ServerInterfaceWrapper) DeleteBookDocumentByID(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "bookID" -------------
+	var bookID BookID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bookID", c.Params("bookID"), &bookID, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter bookID: %w", err).Error())
+	}
+
+	// ------------- Path parameter "documentID" -------------
+	var documentID DocumentID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "documentID", c.Params("documentID"), &documentID, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter documentID: %w", err).Error())
+	}
+
+	return siw.Handler.DeleteBookDocumentByID(c, bookID, documentID)
+}
+
+// GetBookDocumentByID operation middleware
+func (siw *ServerInterfaceWrapper) GetBookDocumentByID(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "bookID" -------------
+	var bookID BookID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bookID", c.Params("bookID"), &bookID, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter bookID: %w", err).Error())
+	}
+
+	// ------------- Path parameter "documentID" -------------
+	var documentID DocumentID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "documentID", c.Params("documentID"), &documentID, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter documentID: %w", err).Error())
+	}
+
+	return siw.Handler.GetBookDocumentByID(c, bookID, documentID)
+}
+
+// CompleteBookDocumentUpload operation middleware
+func (siw *ServerInterfaceWrapper) CompleteBookDocumentUpload(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "bookID" -------------
+	var bookID BookID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bookID", c.Params("bookID"), &bookID, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter bookID: %w", err).Error())
+	}
+
+	// ------------- Path parameter "documentID" -------------
+	var documentID DocumentID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "documentID", c.Params("documentID"), &documentID, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter documentID: %w", err).Error())
+	}
+
+	return siw.Handler.CompleteBookDocumentUpload(c, bookID, documentID)
+}
+
+// DownloadBookDocument operation middleware
+func (siw *ServerInterfaceWrapper) DownloadBookDocument(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "bookID" -------------
+	var bookID BookID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bookID", c.Params("bookID"), &bookID, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter bookID: %w", err).Error())
+	}
+
+	// ------------- Path parameter "documentID" -------------
+	var documentID DocumentID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "documentID", c.Params("documentID"), &documentID, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter documentID: %w", err).Error())
+	}
+
+	return siw.Handler.DownloadBookDocument(c, bookID, documentID)
+}
+
 // FiberServerOptions provides options for the Fiber server.
 type FiberServerOptions struct {
 	BaseURL     string
@@ -269,6 +529,18 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 	router.Get(options.BaseURL+"/books/:bookID", wrapper.GetBookByID)
 
 	router.Put(options.BaseURL+"/books/:bookID", wrapper.UpdateBook)
+
+	router.Get(options.BaseURL+"/books/:bookID/documents", wrapper.ListBookDocuments)
+
+	router.Post(options.BaseURL+"/books/:bookID/documents/presign", wrapper.CreateBookDocumentPresign)
+
+	router.Delete(options.BaseURL+"/books/:bookID/documents/:documentID", wrapper.DeleteBookDocumentByID)
+
+	router.Get(options.BaseURL+"/books/:bookID/documents/:documentID", wrapper.GetBookDocumentByID)
+
+	router.Post(options.BaseURL+"/books/:bookID/documents/:documentID/complete", wrapper.CompleteBookDocumentUpload)
+
+	router.Get(options.BaseURL+"/books/:bookID/documents/:documentID/download", wrapper.DownloadBookDocument)
 
 }
 
@@ -419,6 +691,191 @@ func (response UpdateBook422JSONResponse) VisitUpdateBookResponse(ctx *fiber.Ctx
 	return ctx.JSON(&response)
 }
 
+type ListBookDocumentsRequestObject struct {
+	BookID BookID `json:"bookID"`
+	Params ListBookDocumentsParams
+}
+
+type ListBookDocumentsResponseObject interface {
+	VisitListBookDocumentsResponse(ctx *fiber.Ctx) error
+}
+
+type ListBookDocuments200JSONResponse DocumentList
+
+func (response ListBookDocuments200JSONResponse) VisitListBookDocumentsResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type ListBookDocuments404JSONResponse Problem
+
+func (response ListBookDocuments404JSONResponse) VisitListBookDocumentsResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type CreateBookDocumentPresignRequestObject struct {
+	BookID BookID `json:"bookID"`
+	Body   *CreateBookDocumentPresignJSONRequestBody
+}
+
+type CreateBookDocumentPresignResponseObject interface {
+	VisitCreateBookDocumentPresignResponse(ctx *fiber.Ctx) error
+}
+
+type CreateBookDocumentPresign201JSONResponse DocumentPresignResponse
+
+func (response CreateBookDocumentPresign201JSONResponse) VisitCreateBookDocumentPresignResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(201)
+
+	return ctx.JSON(&response)
+}
+
+type CreateBookDocumentPresign404JSONResponse Problem
+
+func (response CreateBookDocumentPresign404JSONResponse) VisitCreateBookDocumentPresignResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type CreateBookDocumentPresign422JSONResponse Problem
+
+func (response CreateBookDocumentPresign422JSONResponse) VisitCreateBookDocumentPresignResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(422)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteBookDocumentByIDRequestObject struct {
+	BookID     BookID     `json:"bookID"`
+	DocumentID DocumentID `json:"documentID"`
+}
+
+type DeleteBookDocumentByIDResponseObject interface {
+	VisitDeleteBookDocumentByIDResponse(ctx *fiber.Ctx) error
+}
+
+type DeleteBookDocumentByID204Response struct {
+}
+
+func (response DeleteBookDocumentByID204Response) VisitDeleteBookDocumentByIDResponse(ctx *fiber.Ctx) error {
+	ctx.Status(204)
+	return nil
+}
+
+type DeleteBookDocumentByID404JSONResponse Problem
+
+func (response DeleteBookDocumentByID404JSONResponse) VisitDeleteBookDocumentByIDResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type GetBookDocumentByIDRequestObject struct {
+	BookID     BookID     `json:"bookID"`
+	DocumentID DocumentID `json:"documentID"`
+}
+
+type GetBookDocumentByIDResponseObject interface {
+	VisitGetBookDocumentByIDResponse(ctx *fiber.Ctx) error
+}
+
+type GetBookDocumentByID200JSONResponse Document
+
+func (response GetBookDocumentByID200JSONResponse) VisitGetBookDocumentByIDResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type GetBookDocumentByID404JSONResponse Problem
+
+func (response GetBookDocumentByID404JSONResponse) VisitGetBookDocumentByIDResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type CompleteBookDocumentUploadRequestObject struct {
+	BookID     BookID     `json:"bookID"`
+	DocumentID DocumentID `json:"documentID"`
+	Body       *CompleteBookDocumentUploadJSONRequestBody
+}
+
+type CompleteBookDocumentUploadResponseObject interface {
+	VisitCompleteBookDocumentUploadResponse(ctx *fiber.Ctx) error
+}
+
+type CompleteBookDocumentUpload200JSONResponse Document
+
+func (response CompleteBookDocumentUpload200JSONResponse) VisitCompleteBookDocumentUploadResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type CompleteBookDocumentUpload404JSONResponse Problem
+
+func (response CompleteBookDocumentUpload404JSONResponse) VisitCompleteBookDocumentUploadResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type CompleteBookDocumentUpload422JSONResponse Problem
+
+func (response CompleteBookDocumentUpload422JSONResponse) VisitCompleteBookDocumentUploadResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(422)
+
+	return ctx.JSON(&response)
+}
+
+type DownloadBookDocumentRequestObject struct {
+	BookID     BookID     `json:"bookID"`
+	DocumentID DocumentID `json:"documentID"`
+}
+
+type DownloadBookDocumentResponseObject interface {
+	VisitDownloadBookDocumentResponse(ctx *fiber.Ctx) error
+}
+
+type DownloadBookDocument302ResponseHeaders struct {
+	Location string
+}
+
+type DownloadBookDocument302Response struct {
+	Headers DownloadBookDocument302ResponseHeaders
+}
+
+func (response DownloadBookDocument302Response) VisitDownloadBookDocumentResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Location", fmt.Sprint(response.Headers.Location))
+	ctx.Status(302)
+	return nil
+}
+
+type DownloadBookDocument404JSONResponse Problem
+
+func (response DownloadBookDocument404JSONResponse) VisitDownloadBookDocumentResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// List books
@@ -439,6 +896,24 @@ type StrictServerInterface interface {
 	// Replace a book by id
 	// (PUT /books/{bookID})
 	UpdateBook(ctx context.Context, request UpdateBookRequestObject) (UpdateBookResponseObject, error)
+	// List documents for a book
+	// (GET /books/{bookID}/documents)
+	ListBookDocuments(ctx context.Context, request ListBookDocumentsRequestObject) (ListBookDocumentsResponseObject, error)
+	// Create a presigned upload URL for a document
+	// (POST /books/{bookID}/documents/presign)
+	CreateBookDocumentPresign(ctx context.Context, request CreateBookDocumentPresignRequestObject) (CreateBookDocumentPresignResponseObject, error)
+	// Delete a document
+	// (DELETE /books/{bookID}/documents/{documentID})
+	DeleteBookDocumentByID(ctx context.Context, request DeleteBookDocumentByIDRequestObject) (DeleteBookDocumentByIDResponseObject, error)
+	// Get document metadata
+	// (GET /books/{bookID}/documents/{documentID})
+	GetBookDocumentByID(ctx context.Context, request GetBookDocumentByIDRequestObject) (GetBookDocumentByIDResponseObject, error)
+	// Confirm document upload and persist metadata
+	// (POST /books/{bookID}/documents/{documentID}/complete)
+	CompleteBookDocumentUpload(ctx context.Context, request CompleteBookDocumentUploadRequestObject) (CompleteBookDocumentUploadResponseObject, error)
+	// Download a document
+	// (GET /books/{bookID}/documents/{documentID}/download)
+	DownloadBookDocument(ctx context.Context, request DownloadBookDocumentRequestObject) (DownloadBookDocumentResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx *fiber.Ctx, args interface{}) (interface{}, error)
@@ -618,6 +1093,185 @@ func (sh *strictHandler) UpdateBook(ctx *fiber.Ctx, bookID BookID) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	} else if validResponse, ok := response.(UpdateBookResponseObject); ok {
 		if err := validResponse.VisitUpdateBookResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// ListBookDocuments operation middleware
+func (sh *strictHandler) ListBookDocuments(ctx *fiber.Ctx, bookID BookID, params ListBookDocumentsParams) error {
+	var request ListBookDocumentsRequestObject
+
+	request.BookID = bookID
+	request.Params = params
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.ListBookDocuments(ctx.UserContext(), request.(ListBookDocumentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListBookDocuments")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(ListBookDocumentsResponseObject); ok {
+		if err := validResponse.VisitListBookDocumentsResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// CreateBookDocumentPresign operation middleware
+func (sh *strictHandler) CreateBookDocumentPresign(ctx *fiber.Ctx, bookID BookID) error {
+	var request CreateBookDocumentPresignRequestObject
+
+	request.BookID = bookID
+
+	var body CreateBookDocumentPresignJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateBookDocumentPresign(ctx.UserContext(), request.(CreateBookDocumentPresignRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateBookDocumentPresign")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(CreateBookDocumentPresignResponseObject); ok {
+		if err := validResponse.VisitCreateBookDocumentPresignResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// DeleteBookDocumentByID operation middleware
+func (sh *strictHandler) DeleteBookDocumentByID(ctx *fiber.Ctx, bookID BookID, documentID DocumentID) error {
+	var request DeleteBookDocumentByIDRequestObject
+
+	request.BookID = bookID
+	request.DocumentID = documentID
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteBookDocumentByID(ctx.UserContext(), request.(DeleteBookDocumentByIDRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteBookDocumentByID")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(DeleteBookDocumentByIDResponseObject); ok {
+		if err := validResponse.VisitDeleteBookDocumentByIDResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// GetBookDocumentByID operation middleware
+func (sh *strictHandler) GetBookDocumentByID(ctx *fiber.Ctx, bookID BookID, documentID DocumentID) error {
+	var request GetBookDocumentByIDRequestObject
+
+	request.BookID = bookID
+	request.DocumentID = documentID
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.GetBookDocumentByID(ctx.UserContext(), request.(GetBookDocumentByIDRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetBookDocumentByID")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(GetBookDocumentByIDResponseObject); ok {
+		if err := validResponse.VisitGetBookDocumentByIDResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// CompleteBookDocumentUpload operation middleware
+func (sh *strictHandler) CompleteBookDocumentUpload(ctx *fiber.Ctx, bookID BookID, documentID DocumentID) error {
+	var request CompleteBookDocumentUploadRequestObject
+
+	request.BookID = bookID
+	request.DocumentID = documentID
+
+	var body CompleteBookDocumentUploadJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.CompleteBookDocumentUpload(ctx.UserContext(), request.(CompleteBookDocumentUploadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CompleteBookDocumentUpload")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(CompleteBookDocumentUploadResponseObject); ok {
+		if err := validResponse.VisitCompleteBookDocumentUploadResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// DownloadBookDocument operation middleware
+func (sh *strictHandler) DownloadBookDocument(ctx *fiber.Ctx, bookID BookID, documentID DocumentID) error {
+	var request DownloadBookDocumentRequestObject
+
+	request.BookID = bookID
+	request.DocumentID = documentID
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.DownloadBookDocument(ctx.UserContext(), request.(DownloadBookDocumentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DownloadBookDocument")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(DownloadBookDocumentResponseObject); ok {
+		if err := validResponse.VisitDownloadBookDocumentResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {

@@ -126,12 +126,12 @@ function LibraryApp() {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-12">
         <header className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div className="space-y-3">
-            <Badge variant="secondary">OpenAPI Library</Badge>
+            <Badge variant="secondary">Chillguys present</Badge>
             <h1 className="text-3xl font-semibold tracking-tight text-primary">
-              Catalog Explorer
+              Bookshelf
             </h1>
             <p className="text-muted-foreground text-sm">
-              Browse, search, and sort your bookshelf.
+              Explore our book catalog, search and filter.
             </p>
           </div>
           <Card size="sm" className="w-full md:w-72">
@@ -142,14 +142,10 @@ function LibraryApp() {
                 <Badge variant="secondary">{statusLabel}</Badge>
               </CardAction>
             </CardHeader>
-            <CardContent className="flex items-center justify-between">
+            <CardContent className="flex items-start">
               <div>
                 <div className="text-muted-foreground text-xs">Total titles</div>
                 <div className="text-lg font-semibold">{total}</div>
-              </div>
-              <div>
-                <div className="text-muted-foreground text-xs">Visible</div>
-                <div className="text-lg font-semibold">{books.length}</div>
               </div>
             </CardContent>
           </Card>

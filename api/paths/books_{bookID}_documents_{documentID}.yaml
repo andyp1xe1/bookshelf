@@ -1,0 +1,39 @@
+get:
+  operationId: getBookDocumentByID
+  tags:
+    - documents
+  summary: Get document metadata
+  parameters:
+    - $ref: ../components/parameters/BookID.yaml
+    - $ref: ../components/parameters/DocumentID.yaml
+  responses:
+    '200':
+      description: Successful response
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/Document.yaml
+    '404':
+      description: Document not found
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/Problem.yaml
+delete:
+  operationId: deleteBookDocumentByID
+  tags:
+    - documents
+  summary: Delete a document
+  description: Only the uploader or an admin can delete documents.
+  parameters:
+    - $ref: ../components/parameters/BookID.yaml
+    - $ref: ../components/parameters/DocumentID.yaml
+  responses:
+    '204':
+      description: Deleted
+    '404':
+      description: Document not found
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/Problem.yaml
