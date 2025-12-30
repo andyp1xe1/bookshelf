@@ -7,12 +7,6 @@ post:
   parameters:
     - $ref: ../components/parameters/BookID.yaml
     - $ref: ../components/parameters/DocumentID.yaml
-  requestBody:
-    required: true
-    content:
-      application/json:
-        schema:
-          $ref: ../components/schemas/DocumentCompleteRequest.yaml
   responses:
     '200':
       description: Upload confirmed

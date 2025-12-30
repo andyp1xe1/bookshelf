@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"go-openapi/internal/api"
-	"go-openapi/internal/store"
+	"github.com/andyp1xe1/bookshelf/internal/api"
+	"github.com/andyp1xe1/bookshelf/internal/store"
 )
 
 type BookStore interface {

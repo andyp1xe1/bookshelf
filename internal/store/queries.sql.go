@@ -119,7 +119,7 @@ type CreateDocumentParams struct {
 	Filename    string `json:"filename"`
 	ObjectKey   string `json:"object_key"`
 	ContentType string `json:"content_type"`
-	SizeBytes   int32  `json:"size_bytes"`
+	SizeBytes   int64  `json:"size_bytes"`
 	Status      string `json:"status"`
 	Checksum    string `json:"checksum"`
 }
@@ -229,6 +229,70 @@ WHERE object_key = $1
 
 func (q *Queries) GetDocumentByObjectKey(ctx context.Context, objectKey string) (Document, error) {
 	row := q.db.QueryRow(ctx, getDocumentByObjectKey, objectKey)
+	var i Document
+	err := row.Scan(
+		&i.ID,
+		&i.BookID,
+		&i.Filename,
+		&i.ObjectKey,
+		&i.ContentType,
+		&i.SizeBytes,
+		&i.Status,
+		&i.Checksum,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const insertOrUpdateDocument = `-- name: InsertOrUpdateDocument :one
+INSERT INTO documents (
+  book_id,
+  filename,
+  object_key,
+  content_type,
+  size_bytes,
+  status,
+  checksum
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6,
+  $7
+) ON CONFLICT (object_key) DO UPDATE
+SET book_id = EXCLUDED.book_id,
+    filename = EXCLUDED.filename,
+    content_type = EXCLUDED.content_type,
+    size_bytes = EXCLUDED.size_bytes,
+    status = EXCLUDED.status,
+    checksum = EXCLUDED.checksum,
+    updated_at = now()
+RETURNING id, book_id, filename, object_key, content_type, size_bytes, status, checksum, created_at, updated_at
+`
+
+type InsertOrUpdateDocumentParams struct {
+	BookID      *int64 `json:"book_id"`
+	Filename    string `json:"filename"`
+	ObjectKey   string `json:"object_key"`
+	ContentType string `json:"content_type"`
+	SizeBytes   int64  `json:"size_bytes"`
+	Status      string `json:"status"`
+	Checksum    string `json:"checksum"`
+}
+
+func (q *Queries) InsertOrUpdateDocument(ctx context.Context, arg InsertOrUpdateDocumentParams) (Document, error) {
+	row := q.db.QueryRow(ctx, insertOrUpdateDocument,
+		arg.BookID,
+		arg.Filename,
+		arg.ObjectKey,
+		arg.ContentType,
+		arg.SizeBytes,
+		arg.Status,
+		arg.Checksum,
+	)
 	var i Document
 	err := row.Scan(
 		&i.ID,
@@ -463,7 +527,7 @@ type UpdateFullDocumentParams struct {
 	Filename    string `json:"filename"`
 	ObjectKey   string `json:"object_key"`
 	ContentType string `json:"content_type"`
-	SizeBytes   int32  `json:"size_bytes"`
+	SizeBytes   int64  `json:"size_bytes"`
 	Status      string `json:"status"`
 	Checksum    string `json:"checksum"`
 }

@@ -24,7 +24,7 @@ type Document struct {
 	Filename    string             `json:"filename"`
 	ObjectKey   string             `json:"object_key"`
 	ContentType string             `json:"content_type"`
-	SizeBytes   int32              `json:"size_bytes"`
+	SizeBytes   int64              `json:"size_bytes"`
 	Status      string             `json:"status"`
 	Checksum    string             `json:"checksum"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`

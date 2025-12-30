@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"go-openapi/internal/api"
-	"go-openapi/internal/handlers"
-	"go-openapi/internal/services"
-	"go-openapi/internal/store"
+	"github.com/andyp1xe1/bookshelf/internal/api"
+	"github.com/andyp1xe1/bookshelf/internal/handlers"
+	"github.com/andyp1xe1/bookshelf/internal/services"
+	"github.com/andyp1xe1/bookshelf/internal/store"
 	"log"
 	"math/rand"
 	"net/http"
@@ -18,6 +18,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 )
+
+type HandlerWrapper struct {
+	*handlers.BookHandler
+	*handlers.DocumentHandler
+}
 
 func main() {
 	if err := godotenv.Load(); err != nil {
@@ -44,9 +49,17 @@ func main() {
 		return c.SendStatus(fiber.StatusOK)
 	})
 	store := store.New(pool)
-	service := services.NewBookService(store)
-	handler := handlers.NewBookHandler(service)
-	si := api.NewStrictHandler(handler, nil)
+	bookService := services.NewBookService(store)
+	docsService, err := services.NewDocumentService(store)
+	if err != nil {
+		log.Fatalf("failed to create document service: %v", err)
+	}
+	bookHandler := handlers.NewBookHandler(bookService)
+	documentHandler := handlers.NewDocumentHandler(docsService)
+	si := api.NewStrictHandler(&HandlerWrapper{
+		BookHandler:     bookHandler,
+		DocumentHandler: documentHandler,
+	}, nil)
 
 	api.RegisterHandlers(app, si)
 

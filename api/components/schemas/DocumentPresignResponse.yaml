@@ -3,9 +3,7 @@ required:
   - document
   - uploadUrl
   - uploadMethod
-  - headers
   - expiresAt
-  - objectKey
 properties:
   document:
     $ref: ./Document.yaml
@@ -15,13 +13,7 @@ properties:
   uploadMethod:
     type: string
     enum:
-      - POST
-  headers:
-    type: object
-    additionalProperties:
-      type: string
+      - PUT
   expiresAt:
     type: string
     format: date-time
-  objectKey:
-    type: string

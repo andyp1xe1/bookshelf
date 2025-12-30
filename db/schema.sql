@@ -14,9 +14,9 @@ CREATE TABLE documents (
   filename TEXT NOT NULL,
   object_key TEXT NOT NULL UNIQUE,
   content_type TEXT NOT NULL,
-  size_bytes INT NOT NULL,
+  size_bytes BIGINT NOT NULL,
   status TEXT NOT NULL,
-  checksum TEXT NOT NULL,
+  checksum TEXT not null,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

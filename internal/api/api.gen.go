@@ -21,7 +21,7 @@ const (
 
 // Defines values for DocumentPresignResponseUploadMethod.
 const (
-	POST DocumentPresignResponseUploadMethod = "POST"
+	PUT DocumentPresignResponseUploadMethod = "PUT"
 )
 
 // Defines values for UploadStatus.
@@ -72,23 +72,18 @@ type ContentType string
 
 // Document defines model for Document.
 type Document struct {
-	BookID         int64        `json:"bookID"`
-	ChecksumSha256 *string      `json:"checksumSha256,omitempty"`
-	ContentType    ContentType  `json:"contentType"`
-	CreatedAt      time.Time    `json:"createdAt"`
-	Filename       string       `json:"filename"`
-	Id             int64        `json:"id"`
-	ObjectKey      *string      `json:"objectKey,omitempty"`
-	SizeBytes      int64        `json:"sizeBytes"`
-	Status         UploadStatus `json:"status"`
-	UpdatedAt      time.Time    `json:"updatedAt"`
-}
+	BookID int64 `json:"bookID"`
 
-// DocumentCompleteRequest defines model for DocumentCompleteRequest.
-type DocumentCompleteRequest struct {
-	ChecksumSha256 *string     `json:"checksumSha256,omitempty"`
-	ContentType    ContentType `json:"contentType"`
-	SizeBytes      int64       `json:"sizeBytes"`
+	// ChecksumSha256Hex SHA-256 checksum as 64 lowercase hex chars
+	ChecksumSha256Hex *string      `json:"checksumSha256Hex,omitempty"`
+	ContentType       ContentType  `json:"contentType"`
+	CreatedAt         time.Time    `json:"createdAt"`
+	Filename          string       `json:"filename"`
+	Id                int64        `json:"id"`
+	ObjectKey         *string      `json:"objectKey,omitempty"`
+	SizeBytes         int64        `json:"sizeBytes"`
+	Status            UploadStatus `json:"status"`
+	UpdatedAt         time.Time    `json:"updatedAt"`
 }
 
 // DocumentList defines model for DocumentList.
@@ -101,8 +96,6 @@ type DocumentList struct {
 type DocumentPresignResponse struct {
 	Document     Document                            `json:"document"`
 	ExpiresAt    time.Time                           `json:"expiresAt"`
-	Headers      map[string]string                   `json:"headers"`
-	ObjectKey    string                              `json:"objectKey"`
 	UploadMethod DocumentPresignResponseUploadMethod `json:"uploadMethod"`
 	UploadUrl    string                              `json:"uploadUrl"`
 }
@@ -112,11 +105,12 @@ type DocumentPresignResponseUploadMethod string
 
 // DocumentUploadRequest defines model for DocumentUploadRequest.
 type DocumentUploadRequest struct {
-	ChecksumSha256 *string            `json:"checksumSha256,omitempty"`
-	ContentType    ContentType        `json:"contentType"`
-	Filename       string             `json:"filename"`
-	Metadata       *map[string]string `json:"metadata,omitempty"`
-	SizeBytes      int64              `json:"sizeBytes"`
+	// ChecksumSha256Hex SHA-256 checksum as 64 lowercase hex chars
+	ChecksumSha256Hex string             `json:"checksumSha256Hex"`
+	ContentType       ContentType        `json:"contentType"`
+	Filename          string             `json:"filename"`
+	Metadata          *map[string]string `json:"metadata,omitempty"`
+	SizeBytes         int64              `json:"sizeBytes"`
 }
 
 // Problem defines model for Problem.
@@ -164,9 +158,6 @@ type UpdateBookJSONRequestBody = BookUpdate
 
 // CreateBookDocumentPresignJSONRequestBody defines body for CreateBookDocumentPresign for application/json ContentType.
 type CreateBookDocumentPresignJSONRequestBody = DocumentUploadRequest
-
-// CompleteBookDocumentUploadJSONRequestBody defines body for CompleteBookDocumentUpload for application/json ContentType.
-type CompleteBookDocumentUploadJSONRequestBody = DocumentCompleteRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -810,7 +801,6 @@ func (response GetBookDocumentByID404JSONResponse) VisitGetBookDocumentByIDRespo
 type CompleteBookDocumentUploadRequestObject struct {
 	BookID     BookID     `json:"bookID"`
 	DocumentID DocumentID `json:"documentID"`
-	Body       *CompleteBookDocumentUploadJSONRequestBody
 }
 
 type CompleteBookDocumentUploadResponseObject interface {
@@ -1224,12 +1214,6 @@ func (sh *strictHandler) CompleteBookDocumentUpload(ctx *fiber.Ctx, bookID BookI
 
 	request.BookID = bookID
 	request.DocumentID = documentID
-
-	var body CompleteBookDocumentUploadJSONRequestBody
-	if err := ctx.BodyParser(&body); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	}
-	request.Body = &body
 
 	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
 		return sh.ssi.CompleteBookDocumentUpload(ctx.UserContext(), request.(CompleteBookDocumentUploadRequestObject))

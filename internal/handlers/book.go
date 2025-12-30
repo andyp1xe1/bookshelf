@@ -4,10 +4,10 @@ package handlers
 import (
 	"context"
 
-	"go-openapi/internal/api"
+	"github.com/andyp1xe1/bookshelf/internal/api"
 )
 
-type Service interface {
+type BookService interface {
 	Create(ctx context.Context, in api.BookCreate) (api.Book, error)
 	Get(ctx context.Context, id int64) (api.Book, bool, error)
 	Update(ctx context.Context, id int64, in api.BookUpdate) (api.Book, bool, error)
@@ -17,10 +17,10 @@ type Service interface {
 }
 
 type BookHandler struct {
-	service Service
+	service BookService
 }
 
-func NewBookHandler(service Service) *BookHandler {
+func NewBookHandler(service BookService) *BookHandler {
 	return &BookHandler{service: service}
 }
 

@@ -26,8 +26,10 @@ properties:
     $ref: ./UploadStatus.yaml
   objectKey:
     type: string
-  checksumSha256:
+  checksumSha256Hex:
     type: string
+    description: SHA-256 checksum as 64 lowercase hex chars
+    pattern: '^[0-9a-f]{64}$'
   createdAt:
     type: string
     format: date-time

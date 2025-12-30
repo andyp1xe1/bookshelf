@@ -119,3 +119,30 @@ SET filename = $2,
     updated_at = now()
 WHERE id = $1
 RETURNING id, book_id, filename, object_key, content_type, size_bytes, status, checksum, created_at, updated_at;
+
+-- name: InsertOrUpdateDocument :one
+INSERT INTO documents (
+  book_id,
+  filename,
+  object_key,
+  content_type,
+  size_bytes,
+  status,
+  checksum
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6,
+  $7
+) ON CONFLICT (object_key) DO UPDATE
+SET book_id = EXCLUDED.book_id,
+    filename = EXCLUDED.filename,
+    content_type = EXCLUDED.content_type,
+    size_bytes = EXCLUDED.size_bytes,
+    status = EXCLUDED.status,
+    checksum = EXCLUDED.checksum,
+    updated_at = now()
+RETURNING id, book_id, filename, object_key, content_type, size_bytes, status, checksum, created_at, updated_at;

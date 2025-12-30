@@ -288,12 +288,6 @@ paths:
       parameters:
         - $ref: '#/components/parameters/BookID'
         - $ref: '#/components/parameters/DocumentID'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DocumentCompleteRequest'
       responses:
         '200':
           description: Upload confirmed
@@ -470,8 +464,10 @@ components:
           $ref: '#/components/schemas/UploadStatus'
         objectKey:
           type: string
-        checksumSha256:
+        checksumSha256Hex:
           type: string
+          description: SHA-256 checksum as 64 lowercase hex chars
+          pattern: ^[0-9a-f]{64}$
         createdAt:
           type: string
           format: date-time
@@ -497,6 +493,7 @@ components:
         - filename
         - contentType
         - sizeBytes
+        - checksumSha256Hex
       properties:
         filename:
           type: string
@@ -506,9 +503,11 @@ components:
           type: integer
           format: int64
           minimum: 1
-          maximum: 10485760
-        checksumSha256:
+          maximum: 20971520
+        checksumSha256Hex:
           type: string
+          description: SHA-256 checksum as 64 lowercase hex chars
+          pattern: ^[0-9a-f]{64}$
         metadata:
           type: object
           additionalProperties:
@@ -519,9 +518,7 @@ components:
         - document
         - uploadUrl
         - uploadMethod
-        - headers
         - expiresAt
-        - objectKey
       properties:
         document:
           $ref: '#/components/schemas/Document'
@@ -531,31 +528,10 @@ components:
         uploadMethod:
           type: string
           enum:
-            - POST
-        headers:
-          type: object
-          additionalProperties:
-            type: string
+            - PUT
         expiresAt:
           type: string
           format: date-time
-        objectKey:
-          type: string
-    DocumentCompleteRequest:
-      type: object
-      required:
-        - sizeBytes
-        - contentType
-      properties:
-        sizeBytes:
-          type: integer
-          format: int64
-          minimum: 1
-          maximum: 10485760
-        contentType:
-          $ref: '#/components/schemas/ContentType'
-        checksumSha256:
-          type: string
   parameters:
     BookID:
       name: bookID
