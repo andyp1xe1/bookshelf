@@ -1,3 +1,10 @@
+import {
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  SignUpButton,
+  UserButton,
+} from "@clerk/clerk-react"
 import * as React from "react"
 
 import { useQuery } from "@tanstack/react-query"
@@ -124,6 +131,20 @@ function LibraryApp() {
   return (
     <div className="dark min-h-screen bg-muted text-muted-foreground">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-12">
+        <div className="flex items-center justify-end gap-3">
+          <SignedOut>
+            <SignInButton mode="modal">
+              <Button variant="secondary">Sign in</Button>
+            </SignInButton>
+            <SignUpButton mode="modal">
+              <Button>Sign up</Button>
+            </SignUpButton>
+          </SignedOut>
+          <SignedIn>
+            <UserButton />
+          </SignedIn>
+        </div>
+
         <header className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div className="space-y-3">
             <Badge variant="secondary">Chillguys present</Badge>

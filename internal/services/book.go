@@ -13,10 +13,17 @@ type BookStore interface {
 	CreateBook(ctx context.Context, arg store.CreateBookParams) (store.Book, error)
 	GetBook(ctx context.Context, id int64) (store.Book, error)
 	UpdateBook(ctx context.Context, arg store.UpdateBookParams) (store.Book, error)
-	DeleteBook(ctx context.Context, id int64) (int64, error)
+	DeleteBook(ctx context.Context, arg store.DeleteBookParams) (int64, error)
 	ListBooks(ctx context.Context, arg store.ListBooksParams) ([]store.Book, error)
 	SearchBooks(ctx context.Context, arg store.SearchBooksParams) ([]store.Book, error)
 }
+
+// Create(ctx context.Context, userID string, in api.BookCreate) (api.Book, error)
+// Get(ctx context.Context, id int64) (api.Book, bool, error)
+// Update(ctx context.Context, userID string, id int64, in api.BookUpdate) (api.Book, bool, error)
+// Delete(ctx context.Context, userID string, id int64) (bool, error)
+// List(ctx context.Context, limit, offset int32) (api.BookList, error)
+// Search(ctx context.Context, query string, limit, offset int32) (api.BookList, error)
 
 type BookService struct {
 	books BookStore
@@ -28,13 +35,14 @@ func NewBookService(store BookStore) *BookService {
 	}
 }
 
-func (s *BookService) Create(ctx context.Context, in api.BookCreate) (api.Book, error) {
+func (s *BookService) Create(ctx context.Context, userID string, in api.BookCreate) (api.Book, error) {
 	year, err := parsePublishedYear(in.PublishedYear)
 	if err != nil {
 		return api.Book{}, err
 	}
 
 	record, err := s.books.CreateBook(ctx, store.CreateBookParams{
+		UserID:        userID,
 		Title:         in.Title,
 		Author:        in.Author,
 		PublishedYear: year,
@@ -56,7 +64,7 @@ func (s *BookService) Get(ctx context.Context, id int64) (api.Book, bool, error)
 	return recordToAPI(record), true, nil
 }
 
-func (s *BookService) Update(ctx context.Context, id int64, in api.BookUpdate) (api.Book, bool, error) {
+func (s *BookService) Update(ctx context.Context, userID string, id int64, in api.BookUpdate) (api.Book, bool, error) {
 	_, err := s.books.GetBook(ctx, id)
 
 	if err != nil {
@@ -70,6 +78,7 @@ func (s *BookService) Update(ctx context.Context, id int64, in api.BookUpdate) (
 
 	record, err := s.books.UpdateBook(ctx, store.UpdateBookParams{
 		ID:            id,
+		UserID:        userID,
 		Title:         in.Title,
 		Author:        in.Author,
 		PublishedYear: year,
@@ -83,8 +92,11 @@ func (s *BookService) Update(ctx context.Context, id int64, in api.BookUpdate) (
 	return recordToAPI(record), true, nil
 }
 
-func (s *BookService) Delete(ctx context.Context, id int64) (bool, error) {
-	deleted, err := s.books.DeleteBook(ctx, id)
+func (s *BookService) Delete(ctx context.Context, userID string, id int64) (bool, error) {
+	deleted, err := s.books.DeleteBook(ctx, store.DeleteBookParams{
+		ID:     id,
+		UserID: userID,
+	})
 	if err != nil {
 		return false, err
 	}

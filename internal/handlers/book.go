@@ -5,13 +5,14 @@ import (
 	"context"
 
 	"github.com/andyp1xe1/bookshelf/internal/api"
+	"github.com/andyp1xe1/bookshelf/internal/auth"
 )
 
 type BookService interface {
-	Create(ctx context.Context, in api.BookCreate) (api.Book, error)
+	Create(ctx context.Context, userID string, in api.BookCreate) (api.Book, error)
 	Get(ctx context.Context, id int64) (api.Book, bool, error)
-	Update(ctx context.Context, id int64, in api.BookUpdate) (api.Book, bool, error)
-	Delete(ctx context.Context, id int64) (bool, error)
+	Update(ctx context.Context, userID string, id int64, in api.BookUpdate) (api.Book, bool, error)
+	Delete(ctx context.Context, userID string, id int64) (bool, error)
 	List(ctx context.Context, limit, offset int32) (api.BookList, error)
 	Search(ctx context.Context, query string, limit, offset int32) (api.BookList, error)
 }
@@ -34,14 +35,11 @@ func (h *BookHandler) ListBooks(ctx context.Context, in api.ListBooksRequestObje
 }
 
 func (h *BookHandler) CreateBook(ctx context.Context, in api.CreateBookRequestObject) (api.CreateBookResponseObject, error) {
-	if in.Body == nil {
-		detail := "body is required"
-		return api.CreateBook422JSONResponse{
-			Title:  "Validation error",
-			Detail: &detail,
-		}, nil
+	authData, ok := auth.GetAuthData(ctx)
+	if !ok {
+		return api.CreateBook401JSONResponse(UnauthorizedProblem), nil
 	}
-	book, err := h.service.Create(ctx, *in.Body)
+	book, err := h.service.Create(ctx, authData.ID, *in.Body)
 	if err != nil {
 		detail := err.Error()
 		return api.CreateBook422JSONResponse{
@@ -77,14 +75,11 @@ func (h *BookHandler) GetBookByID(ctx context.Context, in api.GetBookByIDRequest
 }
 
 func (h *BookHandler) UpdateBook(ctx context.Context, in api.UpdateBookRequestObject) (api.UpdateBookResponseObject, error) {
-	if in.Body == nil {
-		detail := "body is required"
-		return api.UpdateBook422JSONResponse{
-			Title:  "Validation error",
-			Detail: &detail,
-		}, nil
+	authData, ok := auth.GetAuthData(ctx)
+	if !ok {
+		return api.UpdateBook401JSONResponse(UnauthorizedProblem), nil
 	}
-	book, found, err := h.service.Update(ctx, in.BookID, *in.Body)
+	book, found, err := h.service.Update(ctx, authData.ID, in.BookID, *in.Body)
 	if err != nil {
 		detail := err.Error()
 		return api.UpdateBook422JSONResponse{
@@ -103,7 +98,11 @@ func (h *BookHandler) UpdateBook(ctx context.Context, in api.UpdateBookRequestOb
 }
 
 func (h *BookHandler) DeleteBookByID(ctx context.Context, in api.DeleteBookByIDRequestObject) (api.DeleteBookByIDResponseObject, error) {
-	deleted, err := h.service.Delete(ctx, in.BookID)
+	authData, ok := auth.GetAuthData(ctx)
+	if !ok {
+		return api.DeleteBookByID401JSONResponse(UnauthorizedProblem), nil
+	}
+	deleted, err := h.service.Delete(ctx, authData.ID, in.BookID)
 	if err != nil {
 		return nil, err
 	}

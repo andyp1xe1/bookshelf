@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateBookData, CreateBookErrors, CreateBookResponses, DeleteBookByIdData, DeleteBookByIdErrors, DeleteBookByIdResponses, GetBookByIdData, GetBookByIdErrors, GetBookByIdResponses, ListBooksData, ListBooksResponses, SearchBooksData, SearchBooksResponses, UpdateBookData, UpdateBookErrors, UpdateBookResponses } from './types.gen';
+import type { CompleteBookDocumentUploadData, CompleteBookDocumentUploadErrors, CompleteBookDocumentUploadResponses, CreateBookData, CreateBookDocumentPresignData, CreateBookDocumentPresignErrors, CreateBookDocumentPresignResponses, CreateBookErrors, CreateBookResponses, DeleteBookByIdData, DeleteBookByIdErrors, DeleteBookByIdResponses, DeleteBookDocumentByIdData, DeleteBookDocumentByIdErrors, DeleteBookDocumentByIdResponses, DownloadBookDocumentData, DownloadBookDocumentErrors, GetBookByIdData, GetBookByIdErrors, GetBookByIdResponses, GetBookDocumentByIdData, GetBookDocumentByIdErrors, GetBookDocumentByIdResponses, ListBookDocumentsData, ListBookDocumentsErrors, ListBookDocumentsResponses, ListBooksData, ListBooksResponses, SearchBooksData, SearchBooksResponses, UpdateBookData, UpdateBookErrors, UpdateBookResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -27,6 +27,7 @@ export const listBooks = <ThrowOnError extends boolean = false>(options?: Option
  * Create a new book
  */
 export const createBook = <ThrowOnError extends boolean = false>(options: Options<CreateBookData, ThrowOnError>) => (options.client ?? client).post<CreateBookResponses, CreateBookErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/books',
     ...options,
     headers: {
@@ -61,3 +62,57 @@ export const updateBook = <ThrowOnError extends boolean = false>(options: Option
         ...options.headers
     }
 });
+
+/**
+ * List documents for a book
+ */
+export const listBookDocuments = <ThrowOnError extends boolean = false>(options: Options<ListBookDocumentsData, ThrowOnError>) => (options.client ?? client).get<ListBookDocumentsResponses, ListBookDocumentsErrors, ThrowOnError>({ url: '/books/{bookID}/documents', ...options });
+
+/**
+ * Create a presigned upload URL for a document
+ *
+ * Only authenticated uploaders can request a presigned URL.
+ */
+export const createBookDocumentPresign = <ThrowOnError extends boolean = false>(options: Options<CreateBookDocumentPresignData, ThrowOnError>) => (options.client ?? client).post<CreateBookDocumentPresignResponses, CreateBookDocumentPresignErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/books/{bookID}/documents/presign',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a document
+ *
+ * Only the uploader or an admin can delete documents.
+ */
+export const deleteBookDocumentById = <ThrowOnError extends boolean = false>(options: Options<DeleteBookDocumentByIdData, ThrowOnError>) => (options.client ?? client).delete<DeleteBookDocumentByIdResponses, DeleteBookDocumentByIdErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/books/{bookID}/documents/{documentID}',
+    ...options
+});
+
+/**
+ * Get document metadata
+ */
+export const getBookDocumentById = <ThrowOnError extends boolean = false>(options: Options<GetBookDocumentByIdData, ThrowOnError>) => (options.client ?? client).get<GetBookDocumentByIdResponses, GetBookDocumentByIdErrors, ThrowOnError>({ url: '/books/{bookID}/documents/{documentID}', ...options });
+
+/**
+ * Confirm document upload and persist metadata
+ *
+ * Completes the upload after the file is stored in R2.
+ */
+export const completeBookDocumentUpload = <ThrowOnError extends boolean = false>(options: Options<CompleteBookDocumentUploadData, ThrowOnError>) => (options.client ?? client).post<CompleteBookDocumentUploadResponses, CompleteBookDocumentUploadErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/books/{bookID}/documents/{documentID}/complete',
+    ...options
+});
+
+/**
+ * Download a document
+ *
+ * Redirects to the public R2 object URL.
+ */
+export const downloadBookDocument = <ThrowOnError extends boolean = false>(options: Options<DownloadBookDocumentData, ThrowOnError>) => (options.client ?? client).get<unknown, DownloadBookDocumentErrors, ThrowOnError>({ url: '/books/{bookID}/documents/{documentID}/download', ...options });

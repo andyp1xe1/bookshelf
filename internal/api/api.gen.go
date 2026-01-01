@@ -13,6 +13,10 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
+const (
+	BearerAuthScopes = "BearerAuth.Scopes"
+)
+
 // Defines values for ContentType.
 const (
 	ApplicationepubZip ContentType = "application/epub+zip"
@@ -240,6 +244,8 @@ func (siw *ServerInterfaceWrapper) ListBooks(c *fiber.Ctx) error {
 // CreateBook operation middleware
 func (siw *ServerInterfaceWrapper) CreateBook(c *fiber.Ctx) error {
 
+	c.Context().SetUserValue(BearerAuthScopes, []string{})
+
 	return siw.Handler.CreateBook(c)
 }
 
@@ -302,6 +308,8 @@ func (siw *ServerInterfaceWrapper) DeleteBookByID(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter bookID: %w", err).Error())
 	}
 
+	c.Context().SetUserValue(BearerAuthScopes, []string{})
+
 	return siw.Handler.DeleteBookByID(c, bookID)
 }
 
@@ -333,6 +341,8 @@ func (siw *ServerInterfaceWrapper) UpdateBook(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter bookID: %w", err).Error())
 	}
+
+	c.Context().SetUserValue(BearerAuthScopes, []string{})
 
 	return siw.Handler.UpdateBook(c, bookID)
 }
@@ -389,6 +399,8 @@ func (siw *ServerInterfaceWrapper) CreateBookDocumentPresign(c *fiber.Ctx) error
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter bookID: %w", err).Error())
 	}
 
+	c.Context().SetUserValue(BearerAuthScopes, []string{})
+
 	return siw.Handler.CreateBookDocumentPresign(c, bookID)
 }
 
@@ -412,6 +424,8 @@ func (siw *ServerInterfaceWrapper) DeleteBookDocumentByID(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter documentID: %w", err).Error())
 	}
+
+	c.Context().SetUserValue(BearerAuthScopes, []string{})
 
 	return siw.Handler.DeleteBookDocumentByID(c, bookID, documentID)
 }
@@ -460,6 +474,8 @@ func (siw *ServerInterfaceWrapper) CompleteBookDocumentUpload(c *fiber.Ctx) erro
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter documentID: %w", err).Error())
 	}
+
+	c.Context().SetUserValue(BearerAuthScopes, []string{})
 
 	return siw.Handler.CompleteBookDocumentUpload(c, bookID, documentID)
 }
@@ -569,6 +585,24 @@ func (response CreateBook201JSONResponse) VisitCreateBookResponse(ctx *fiber.Ctx
 	return ctx.JSON(&response)
 }
 
+type CreateBook401JSONResponse Problem
+
+func (response CreateBook401JSONResponse) VisitCreateBookResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(401)
+
+	return ctx.JSON(&response)
+}
+
+type CreateBook403JSONResponse Problem
+
+func (response CreateBook403JSONResponse) VisitCreateBookResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(403)
+
+	return ctx.JSON(&response)
+}
+
 type CreateBook422JSONResponse Problem
 
 func (response CreateBook422JSONResponse) VisitCreateBookResponse(ctx *fiber.Ctx) error {
@@ -609,6 +643,24 @@ type DeleteBookByID204Response struct {
 func (response DeleteBookByID204Response) VisitDeleteBookByIDResponse(ctx *fiber.Ctx) error {
 	ctx.Status(204)
 	return nil
+}
+
+type DeleteBookByID401JSONResponse Problem
+
+func (response DeleteBookByID401JSONResponse) VisitDeleteBookByIDResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(401)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteBookByID403JSONResponse Problem
+
+func (response DeleteBookByID403JSONResponse) VisitDeleteBookByIDResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(403)
+
+	return ctx.JSON(&response)
 }
 
 type DeleteBookByID404JSONResponse Problem
@@ -660,6 +712,24 @@ type UpdateBook200JSONResponse Book
 func (response UpdateBook200JSONResponse) VisitUpdateBookResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type UpdateBook401JSONResponse Problem
+
+func (response UpdateBook401JSONResponse) VisitUpdateBookResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(401)
+
+	return ctx.JSON(&response)
+}
+
+type UpdateBook403JSONResponse Problem
+
+func (response UpdateBook403JSONResponse) VisitUpdateBookResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(403)
 
 	return ctx.JSON(&response)
 }
@@ -727,6 +797,24 @@ func (response CreateBookDocumentPresign201JSONResponse) VisitCreateBookDocument
 	return ctx.JSON(&response)
 }
 
+type CreateBookDocumentPresign401JSONResponse Problem
+
+func (response CreateBookDocumentPresign401JSONResponse) VisitCreateBookDocumentPresignResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(401)
+
+	return ctx.JSON(&response)
+}
+
+type CreateBookDocumentPresign403JSONResponse Problem
+
+func (response CreateBookDocumentPresign403JSONResponse) VisitCreateBookDocumentPresignResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(403)
+
+	return ctx.JSON(&response)
+}
+
 type CreateBookDocumentPresign404JSONResponse Problem
 
 func (response CreateBookDocumentPresign404JSONResponse) VisitCreateBookDocumentPresignResponse(ctx *fiber.Ctx) error {
@@ -760,6 +848,24 @@ type DeleteBookDocumentByID204Response struct {
 func (response DeleteBookDocumentByID204Response) VisitDeleteBookDocumentByIDResponse(ctx *fiber.Ctx) error {
 	ctx.Status(204)
 	return nil
+}
+
+type DeleteBookDocumentByID401JSONResponse Problem
+
+func (response DeleteBookDocumentByID401JSONResponse) VisitDeleteBookDocumentByIDResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(401)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteBookDocumentByID403JSONResponse Problem
+
+func (response DeleteBookDocumentByID403JSONResponse) VisitDeleteBookDocumentByIDResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(403)
+
+	return ctx.JSON(&response)
 }
 
 type DeleteBookDocumentByID404JSONResponse Problem
@@ -812,6 +918,24 @@ type CompleteBookDocumentUpload200JSONResponse Document
 func (response CompleteBookDocumentUpload200JSONResponse) VisitCompleteBookDocumentUploadResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type CompleteBookDocumentUpload401JSONResponse Problem
+
+func (response CompleteBookDocumentUpload401JSONResponse) VisitCompleteBookDocumentUploadResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(401)
+
+	return ctx.JSON(&response)
+}
+
+type CompleteBookDocumentUpload403JSONResponse Problem
+
+func (response CompleteBookDocumentUpload403JSONResponse) VisitCompleteBookDocumentUploadResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(403)
 
 	return ctx.JSON(&response)
 }

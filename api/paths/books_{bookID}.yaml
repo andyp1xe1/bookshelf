@@ -19,6 +19,8 @@ get:
           schema:
             $ref: ../components/schemas/Problem.yaml
 put:
+  security:
+    - BearerAuth: []
   operationId: updateBook
   tags:
     - books
@@ -50,7 +52,21 @@ put:
         application/json:
           schema:
             $ref: ../components/schemas/Problem.yaml
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/Problem.yaml
+    '403':
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/Problem.yaml
 delete:
+  security:
+    - BearerAuth: []
   operationId: deleteBookByID
   tags:
     - books
@@ -62,6 +78,18 @@ delete:
       description: Deleted
     '404':
       description: Book not found
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/Problem.yaml
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/Problem.yaml
+    '403':
+      description: Forbidden
       content:
         application/json:
           schema:

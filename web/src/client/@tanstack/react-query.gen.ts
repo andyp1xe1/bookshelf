@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { createBook, deleteBookById, getBookById, listBooks, type Options, searchBooks, updateBook } from '../sdk.gen';
-import type { CreateBookData, CreateBookError, CreateBookResponse, DeleteBookByIdData, DeleteBookByIdError, DeleteBookByIdResponse, GetBookByIdData, GetBookByIdError, GetBookByIdResponse, ListBooksData, ListBooksResponse, SearchBooksData, SearchBooksResponse, UpdateBookData, UpdateBookError, UpdateBookResponse } from '../types.gen';
+import { completeBookDocumentUpload, createBook, createBookDocumentPresign, deleteBookById, deleteBookDocumentById, downloadBookDocument, getBookById, getBookDocumentById, listBookDocuments, listBooks, type Options, searchBooks, updateBook } from '../sdk.gen';
+import type { CompleteBookDocumentUploadData, CompleteBookDocumentUploadError, CompleteBookDocumentUploadResponse, CreateBookData, CreateBookDocumentPresignData, CreateBookDocumentPresignError, CreateBookDocumentPresignResponse, CreateBookError, CreateBookResponse, DeleteBookByIdData, DeleteBookByIdError, DeleteBookByIdResponse, DeleteBookDocumentByIdData, DeleteBookDocumentByIdError, DeleteBookDocumentByIdResponse, DownloadBookDocumentData, DownloadBookDocumentError, GetBookByIdData, GetBookByIdError, GetBookByIdResponse, GetBookDocumentByIdData, GetBookDocumentByIdError, GetBookDocumentByIdResponse, ListBookDocumentsData, ListBookDocumentsError, ListBookDocumentsResponse, ListBooksData, ListBooksResponse, SearchBooksData, SearchBooksResponse, UpdateBookData, UpdateBookError, UpdateBookResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -226,3 +226,143 @@ export const updateBookMutation = (options?: Partial<Options<UpdateBookData>>): 
     };
     return mutationOptions;
 };
+
+export const listBookDocumentsQueryKey = (options: Options<ListBookDocumentsData>) => createQueryKey('listBookDocuments', options);
+
+/**
+ * List documents for a book
+ */
+export const listBookDocumentsOptions = (options: Options<ListBookDocumentsData>) => queryOptions<ListBookDocumentsResponse, ListBookDocumentsError, ListBookDocumentsResponse, ReturnType<typeof listBookDocumentsQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await listBookDocuments({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: listBookDocumentsQueryKey(options)
+});
+
+export const listBookDocumentsInfiniteQueryKey = (options: Options<ListBookDocumentsData>): QueryKey<Options<ListBookDocumentsData>> => createQueryKey('listBookDocuments', options, true);
+
+/**
+ * List documents for a book
+ */
+export const listBookDocumentsInfiniteOptions = (options: Options<ListBookDocumentsData>) => infiniteQueryOptions<ListBookDocumentsResponse, ListBookDocumentsError, InfiniteData<ListBookDocumentsResponse>, QueryKey<Options<ListBookDocumentsData>>, number | Pick<QueryKey<Options<ListBookDocumentsData>>[0], 'body' | 'headers' | 'path' | 'query'>>(
+// @ts-ignore
+{
+    queryFn: async ({ pageParam, queryKey, signal }) => {
+        // @ts-ignore
+        const page: Pick<QueryKey<Options<ListBookDocumentsData>>[0], 'body' | 'headers' | 'path' | 'query'> = typeof pageParam === 'object' ? pageParam : {
+            query: {
+                offset: pageParam
+            }
+        };
+        const params = createInfiniteParams(queryKey, page);
+        const { data } = await listBookDocuments({
+            ...options,
+            ...params,
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: listBookDocumentsInfiniteQueryKey(options)
+});
+
+/**
+ * Create a presigned upload URL for a document
+ *
+ * Only authenticated uploaders can request a presigned URL.
+ */
+export const createBookDocumentPresignMutation = (options?: Partial<Options<CreateBookDocumentPresignData>>): UseMutationOptions<CreateBookDocumentPresignResponse, CreateBookDocumentPresignError, Options<CreateBookDocumentPresignData>> => {
+    const mutationOptions: UseMutationOptions<CreateBookDocumentPresignResponse, CreateBookDocumentPresignError, Options<CreateBookDocumentPresignData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await createBookDocumentPresign({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Delete a document
+ *
+ * Only the uploader or an admin can delete documents.
+ */
+export const deleteBookDocumentByIdMutation = (options?: Partial<Options<DeleteBookDocumentByIdData>>): UseMutationOptions<DeleteBookDocumentByIdResponse, DeleteBookDocumentByIdError, Options<DeleteBookDocumentByIdData>> => {
+    const mutationOptions: UseMutationOptions<DeleteBookDocumentByIdResponse, DeleteBookDocumentByIdError, Options<DeleteBookDocumentByIdData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await deleteBookDocumentById({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getBookDocumentByIdQueryKey = (options: Options<GetBookDocumentByIdData>) => createQueryKey('getBookDocumentById', options);
+
+/**
+ * Get document metadata
+ */
+export const getBookDocumentByIdOptions = (options: Options<GetBookDocumentByIdData>) => queryOptions<GetBookDocumentByIdResponse, GetBookDocumentByIdError, GetBookDocumentByIdResponse, ReturnType<typeof getBookDocumentByIdQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getBookDocumentById({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getBookDocumentByIdQueryKey(options)
+});
+
+/**
+ * Confirm document upload and persist metadata
+ *
+ * Completes the upload after the file is stored in R2.
+ */
+export const completeBookDocumentUploadMutation = (options?: Partial<Options<CompleteBookDocumentUploadData>>): UseMutationOptions<CompleteBookDocumentUploadResponse, CompleteBookDocumentUploadError, Options<CompleteBookDocumentUploadData>> => {
+    const mutationOptions: UseMutationOptions<CompleteBookDocumentUploadResponse, CompleteBookDocumentUploadError, Options<CompleteBookDocumentUploadData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await completeBookDocumentUpload({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const downloadBookDocumentQueryKey = (options: Options<DownloadBookDocumentData>) => createQueryKey('downloadBookDocument', options);
+
+/**
+ * Download a document
+ *
+ * Redirects to the public R2 object URL.
+ */
+export const downloadBookDocumentOptions = (options: Options<DownloadBookDocumentData>) => queryOptions<unknown, DownloadBookDocumentError, unknown, ReturnType<typeof downloadBookDocumentQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await downloadBookDocument({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: downloadBookDocumentQueryKey(options)
+});

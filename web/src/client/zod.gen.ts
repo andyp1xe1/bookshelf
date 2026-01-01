@@ -11,25 +11,17 @@ export const zBook = z.object({
     genre: z.optional(z.string())
 });
 
+export const zBookList = z.object({
+    items: z.array(zBook),
+    total: z.coerce.bigint()
+});
+
 export const zBookCreate = z.object({
     title: z.string(),
     author: z.string(),
     publishedYear: z.string(),
     isbn: z.string(),
     genre: z.optional(z.string())
-});
-
-export const zBookUpdate = z.object({
-    title: z.string(),
-    author: z.string(),
-    publishedYear: z.string(),
-    isbn: z.string(),
-    genre: z.optional(z.string())
-});
-
-export const zBookList = z.object({
-    items: z.array(zBook),
-    total: z.coerce.bigint()
 });
 
 export const zProblem = z.object({
@@ -40,10 +32,66 @@ export const zProblem = z.object({
     instance: z.optional(z.string())
 });
 
+export const zBookUpdate = z.object({
+    title: z.string(),
+    author: z.string(),
+    publishedYear: z.string(),
+    isbn: z.string(),
+    genre: z.optional(z.string())
+});
+
+export const zContentType = z.enum(['application/pdf', 'application/epub+zip']);
+
+export const zUploadStatus = z.enum([
+    'pending',
+    'uploaded',
+    'processing',
+    'ready',
+    'failed'
+]);
+
+export const zDocument = z.object({
+    id: z.coerce.bigint(),
+    bookID: z.coerce.bigint(),
+    filename: z.string(),
+    contentType: zContentType,
+    sizeBytes: z.coerce.bigint(),
+    status: zUploadStatus,
+    objectKey: z.optional(z.string()),
+    checksumSha256Hex: z.optional(z.string().regex(/^[0-9a-f]{64}$/)),
+    createdAt: z.iso.datetime(),
+    updatedAt: z.iso.datetime()
+});
+
+export const zDocumentList = z.object({
+    items: z.array(zDocument),
+    total: z.coerce.bigint()
+});
+
+export const zDocumentUploadRequest = z.object({
+    filename: z.string(),
+    contentType: zContentType,
+    sizeBytes: z.coerce.bigint().gte(BigInt(1)).lte(BigInt(20971520)),
+    checksumSha256Hex: z.string().regex(/^[0-9a-f]{64}$/),
+    metadata: z.optional(z.record(z.string(), z.string()))
+});
+
+export const zDocumentPresignResponse = z.object({
+    document: zDocument,
+    uploadUrl: z.url(),
+    uploadMethod: z.enum(['PUT']),
+    expiresAt: z.iso.datetime()
+});
+
 /**
  * id of the book
  */
 export const zBookId = z.coerce.bigint();
+
+/**
+ * id of the document
+ */
+export const zDocumentId = z.coerce.bigint();
 
 export const zListBooksData = z.object({
     body: z.optional(z.never()),
@@ -123,3 +171,83 @@ export const zUpdateBookData = z.object({
  * Updated
  */
 export const zUpdateBookResponse = zBook;
+
+export const zListBookDocumentsData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        bookID: z.coerce.bigint()
+    }),
+    query: z.optional(z.object({
+        limit: z.optional(z.int().gte(1).lte(100)).default(20),
+        offset: z.optional(z.int().gte(0)).default(0)
+    }))
+});
+
+/**
+ * Successful response
+ */
+export const zListBookDocumentsResponse = zDocumentList;
+
+export const zCreateBookDocumentPresignData = z.object({
+    body: zDocumentUploadRequest,
+    path: z.object({
+        bookID: z.coerce.bigint()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * Presigned upload created
+ */
+export const zCreateBookDocumentPresignResponse = zDocumentPresignResponse;
+
+export const zDeleteBookDocumentByIdData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        bookID: z.coerce.bigint(),
+        documentID: z.coerce.bigint()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * Deleted
+ */
+export const zDeleteBookDocumentByIdResponse = z.void();
+
+export const zGetBookDocumentByIdData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        bookID: z.coerce.bigint(),
+        documentID: z.coerce.bigint()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * Successful response
+ */
+export const zGetBookDocumentByIdResponse = zDocument;
+
+export const zCompleteBookDocumentUploadData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        bookID: z.coerce.bigint(),
+        documentID: z.coerce.bigint()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * Upload confirmed
+ */
+export const zCompleteBookDocumentUploadResponse = zDocument;
+
+export const zDownloadBookDocumentData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        bookID: z.coerce.bigint(),
+        documentID: z.coerce.bigint()
+    }),
+    query: z.optional(z.never())
+});

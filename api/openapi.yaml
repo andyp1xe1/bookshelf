@@ -28,3 +28,9 @@ paths:
     $ref: paths/books_{bookID}_documents_{documentID}_complete.yaml
   /books/{bookID}/documents/{documentID}/download:
     $ref: paths/books_{bookID}_documents_{documentID}_download.yaml
+components:
+  securitySchemes:
+    BearerAuth:
+      scheme: bearer
+      type: http
+      bearerFormat: JWT

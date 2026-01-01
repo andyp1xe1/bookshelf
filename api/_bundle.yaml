@@ -42,6 +42,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/BookList'
     post:
+      security:
+        - BearerAuth: []
       operationId: createBook
       tags:
         - books
@@ -59,6 +61,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Book'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '422':
           description: Validation error
           content:
@@ -121,6 +135,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
     put:
+      security:
+        - BearerAuth: []
       operationId: updateBook
       tags:
         - books
@@ -140,6 +156,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Book'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '404':
           description: Book not found
           content:
@@ -153,6 +181,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
     delete:
+      security:
+        - BearerAuth: []
       operationId: deleteBookByID
       tags:
         - books
@@ -162,6 +192,18 @@ paths:
       responses:
         '204':
           description: Deleted
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '404':
           description: Book not found
           content:
@@ -206,6 +248,8 @@ paths:
                 $ref: '#/components/schemas/Problem'
   /books/{bookID}/documents/presign:
     post:
+      security:
+        - BearerAuth: []
       operationId: createBookDocumentPresign
       tags:
         - documents
@@ -226,6 +270,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DocumentPresignResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '404':
           description: Book not found
           content:
@@ -261,6 +317,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
     delete:
+      security:
+        - BearerAuth: []
       operationId: deleteBookDocumentByID
       tags:
         - documents
@@ -272,6 +330,18 @@ paths:
       responses:
         '204':
           description: Deleted
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '404':
           description: Document not found
           content:
@@ -280,6 +350,8 @@ paths:
                 $ref: '#/components/schemas/Problem'
   /books/{bookID}/documents/{documentID}/complete:
     post:
+      security:
+        - BearerAuth: []
       operationId: completeBookDocumentUpload
       tags:
         - documents
@@ -295,6 +367,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Document'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '404':
           description: Document not found
           content:
@@ -333,6 +417,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 components:
+  securitySchemes:
+    BearerAuth:
+      scheme: bearer
+      type: http
+      bearerFormat: JWT
   schemas:
     Book:
       type: object

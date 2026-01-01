@@ -27,6 +27,8 @@ get:
           schema:
             $ref: ../components/schemas/BookList.yaml
 post:
+  security:
+    - BearerAuth: []
   operationId: createBook
   tags:
     - books
@@ -46,6 +48,18 @@ post:
             $ref: ../components/schemas/Book.yaml
     '422':
       description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/Problem.yaml
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/Problem.yaml
+    '403':
+      description: Forbidden
       content:
         application/json:
           schema:

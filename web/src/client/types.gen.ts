@@ -13,25 +13,17 @@ export type Book = {
     genre?: string;
 };
 
+export type BookList = {
+    items: Array<Book>;
+    total: number;
+};
+
 export type BookCreate = {
     title: string;
     author: string;
     publishedYear: string;
     isbn: string;
     genre?: string;
-};
-
-export type BookUpdate = {
-    title: string;
-    author: string;
-    publishedYear: string;
-    isbn: string;
-    genre?: string;
-};
-
-export type BookList = {
-    items: Array<Book>;
-    total: number;
 };
 
 export type Problem = {
@@ -42,10 +34,68 @@ export type Problem = {
     instance?: string;
 };
 
+export type BookUpdate = {
+    title: string;
+    author: string;
+    publishedYear: string;
+    isbn: string;
+    genre?: string;
+};
+
+export type ContentType = 'application/pdf' | 'application/epub+zip';
+
+export type UploadStatus = 'pending' | 'uploaded' | 'processing' | 'ready' | 'failed';
+
+export type Document = {
+    id: number;
+    bookID: number;
+    filename: string;
+    contentType: ContentType;
+    sizeBytes: number;
+    status: UploadStatus;
+    objectKey?: string;
+    /**
+     * SHA-256 checksum as 64 lowercase hex chars
+     */
+    checksumSha256Hex?: string;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type DocumentList = {
+    items: Array<Document>;
+    total: number;
+};
+
+export type DocumentUploadRequest = {
+    filename: string;
+    contentType: ContentType;
+    sizeBytes: number;
+    /**
+     * SHA-256 checksum as 64 lowercase hex chars
+     */
+    checksumSha256Hex: string;
+    metadata?: {
+        [key: string]: string;
+    };
+};
+
+export type DocumentPresignResponse = {
+    document: Document;
+    uploadUrl: string;
+    uploadMethod: 'PUT';
+    expiresAt: string;
+};
+
 /**
  * id of the book
  */
 export type BookId = number;
+
+/**
+ * id of the document
+ */
+export type DocumentId = number;
 
 export type ListBooksData = {
     body?: never;
@@ -204,3 +254,201 @@ export type UpdateBookResponses = {
 };
 
 export type UpdateBookResponse = UpdateBookResponses[keyof UpdateBookResponses];
+
+export type ListBookDocumentsData = {
+    body?: never;
+    path: {
+        /**
+         * id of the book
+         */
+        bookID: number;
+    };
+    query?: {
+        limit?: number;
+        offset?: number;
+    };
+    url: '/books/{bookID}/documents';
+};
+
+export type ListBookDocumentsErrors = {
+    /**
+     * Book not found
+     */
+    404: Problem;
+};
+
+export type ListBookDocumentsError = ListBookDocumentsErrors[keyof ListBookDocumentsErrors];
+
+export type ListBookDocumentsResponses = {
+    /**
+     * Successful response
+     */
+    200: DocumentList;
+};
+
+export type ListBookDocumentsResponse = ListBookDocumentsResponses[keyof ListBookDocumentsResponses];
+
+export type CreateBookDocumentPresignData = {
+    body: DocumentUploadRequest;
+    path: {
+        /**
+         * id of the book
+         */
+        bookID: number;
+    };
+    query?: never;
+    url: '/books/{bookID}/documents/presign';
+};
+
+export type CreateBookDocumentPresignErrors = {
+    /**
+     * Book not found
+     */
+    404: Problem;
+    /**
+     * Validation error
+     */
+    422: Problem;
+};
+
+export type CreateBookDocumentPresignError = CreateBookDocumentPresignErrors[keyof CreateBookDocumentPresignErrors];
+
+export type CreateBookDocumentPresignResponses = {
+    /**
+     * Presigned upload created
+     */
+    201: DocumentPresignResponse;
+};
+
+export type CreateBookDocumentPresignResponse = CreateBookDocumentPresignResponses[keyof CreateBookDocumentPresignResponses];
+
+export type DeleteBookDocumentByIdData = {
+    body?: never;
+    path: {
+        /**
+         * id of the book
+         */
+        bookID: number;
+        /**
+         * id of the document
+         */
+        documentID: number;
+    };
+    query?: never;
+    url: '/books/{bookID}/documents/{documentID}';
+};
+
+export type DeleteBookDocumentByIdErrors = {
+    /**
+     * Document not found
+     */
+    404: Problem;
+};
+
+export type DeleteBookDocumentByIdError = DeleteBookDocumentByIdErrors[keyof DeleteBookDocumentByIdErrors];
+
+export type DeleteBookDocumentByIdResponses = {
+    /**
+     * Deleted
+     */
+    204: void;
+};
+
+export type DeleteBookDocumentByIdResponse = DeleteBookDocumentByIdResponses[keyof DeleteBookDocumentByIdResponses];
+
+export type GetBookDocumentByIdData = {
+    body?: never;
+    path: {
+        /**
+         * id of the book
+         */
+        bookID: number;
+        /**
+         * id of the document
+         */
+        documentID: number;
+    };
+    query?: never;
+    url: '/books/{bookID}/documents/{documentID}';
+};
+
+export type GetBookDocumentByIdErrors = {
+    /**
+     * Document not found
+     */
+    404: Problem;
+};
+
+export type GetBookDocumentByIdError = GetBookDocumentByIdErrors[keyof GetBookDocumentByIdErrors];
+
+export type GetBookDocumentByIdResponses = {
+    /**
+     * Successful response
+     */
+    200: Document;
+};
+
+export type GetBookDocumentByIdResponse = GetBookDocumentByIdResponses[keyof GetBookDocumentByIdResponses];
+
+export type CompleteBookDocumentUploadData = {
+    body?: never;
+    path: {
+        /**
+         * id of the book
+         */
+        bookID: number;
+        /**
+         * id of the document
+         */
+        documentID: number;
+    };
+    query?: never;
+    url: '/books/{bookID}/documents/{documentID}/complete';
+};
+
+export type CompleteBookDocumentUploadErrors = {
+    /**
+     * Document not found
+     */
+    404: Problem;
+    /**
+     * Validation error
+     */
+    422: Problem;
+};
+
+export type CompleteBookDocumentUploadError = CompleteBookDocumentUploadErrors[keyof CompleteBookDocumentUploadErrors];
+
+export type CompleteBookDocumentUploadResponses = {
+    /**
+     * Upload confirmed
+     */
+    200: Document;
+};
+
+export type CompleteBookDocumentUploadResponse = CompleteBookDocumentUploadResponses[keyof CompleteBookDocumentUploadResponses];
+
+export type DownloadBookDocumentData = {
+    body?: never;
+    path: {
+        /**
+         * id of the book
+         */
+        bookID: number;
+        /**
+         * id of the document
+         */
+        documentID: number;
+    };
+    query?: never;
+    url: '/books/{bookID}/documents/{documentID}/download';
+};
+
+export type DownloadBookDocumentErrors = {
+    /**
+     * Document not found
+     */
+    404: Problem;
+};
+
+export type DownloadBookDocumentError = DownloadBookDocumentErrors[keyof DownloadBookDocumentErrors];

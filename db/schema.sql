@@ -1,22 +1,23 @@
-CREATE TABLE books (
-  id BIGSERIAL PRIMARY KEY,
-  title TEXT NOT NULL,
-  author TEXT NOT NULL,
-  published_year INT NOT NULL,
-  isbn TEXT NOT NULL UNIQUE,
-  genre TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+create table books (
+  id bigserial primary key,
+  user_id text not null,
+  title text not null,
+  author text not null,
+  published_year int not null,
+  isbn text not null unique,
+  genre text,
+  created_at timestamptz not null default now()
 );
 
-CREATE TABLE documents (
-  id BIGSERIAL PRIMARY KEY,
-  book_id BIGINT REFERENCES books(id) ON DELETE CASCADE,
-  filename TEXT NOT NULL,
-  object_key TEXT NOT NULL UNIQUE,
-  content_type TEXT NOT NULL,
-  size_bytes BIGINT NOT NULL,
-  status TEXT NOT NULL,
-  checksum TEXT not null,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+create table documents (
+  id bigserial primary key,
+  book_id bigint references books(id) on delete cascade,
+  filename text not null,
+  object_key text not null unique,
+  content_type text not null,
+  size_bytes bigint not null,
+  status text not null,
+  checksum text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );

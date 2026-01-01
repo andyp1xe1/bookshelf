@@ -10,6 +10,7 @@ import (
 
 type Book struct {
 	ID            int64              `json:"id"`
+	UserID        string             `json:"user_id"`
 	Title         string             `json:"title"`
 	Author        string             `json:"author"`
 	PublishedYear int32              `json:"published_year"`

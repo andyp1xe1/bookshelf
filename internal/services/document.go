@@ -35,7 +35,7 @@ var (
 
 type DocumentStore interface {
 	CreateDocument(ctx context.Context, arg store.CreateDocumentParams) (store.Document, error)
-	DeleteDocument(ctx context.Context, id int64) (int64, error)
+	DeleteDocument(ctx context.Context, arg store.DeleteDocumentParams) (int64, error)
 	GetDocument(ctx context.Context, id int64) (store.Document, error)
 	GetDocumentByObjectKey(ctx context.Context, objectKey string) (store.Document, error)
 	InsertOrUpdateDocument(ctx context.Context, arg store.InsertOrUpdateDocumentParams) (store.Document, error)
@@ -134,7 +134,7 @@ func checksumHexToBase64(checksumHex string) (string, error) {
 	return base64.StdEncoding.EncodeToString(checksumBytes), nil
 }
 
-func (s *DocumentService) PresignUpload(ctx context.Context, bookID, sizeBytes int64, checksumHex string, contentType string, filename string) (*api.DocumentPresignResponse, error) {
+func (s *DocumentService) PresignUpload(ctx context.Context, userID string, bookID, sizeBytes int64, checksumHex string, contentType string, filename string) (*api.DocumentPresignResponse, error) {
 	if sizeBytes > MaxDocumentSizeBytes {
 		return nil, ErrDocSizeExceeded
 	}
@@ -187,7 +187,7 @@ func (s *DocumentService) PresignUpload(ctx context.Context, bookID, sizeBytes i
 	}, nil
 }
 
-func (s *DocumentService) CompleteUpload(ctx context.Context, bookID, documentID int64) (*api.Document, error) {
+func (s *DocumentService) CompleteUpload(ctx context.Context, userID string, bookID, documentID int64) (*api.Document, error) {
 	var err error
 
 	docRecord, err := s.docs.GetDocument(ctx, documentID)
@@ -250,7 +250,7 @@ func (s *DocumentService) GetDocMeta(ctx context.Context, bookID, documentID int
 	return documentToAPIPtr(docRecord), nil
 }
 
-func (s *DocumentService) DeleteByID(ctx context.Context, bookID, documentID int64) error {
+func (s *DocumentService) DeleteByID(ctx context.Context, userID string, bookID, documentID int64) error {
 	docRecord, err := s.docs.GetDocument(ctx, documentID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -271,7 +271,11 @@ func (s *DocumentService) DeleteByID(ctx context.Context, bookID, documentID int
 		return err
 	}
 
-	_, err = s.docs.DeleteDocument(ctx, documentID)
+	_, err = s.docs.DeleteDocument(ctx, store.DeleteDocumentParams{
+		ID:     documentID,
+		BookID: &bookID,
+		UserID: userID,
+	})
 	if err != nil {
 		return err
 	}

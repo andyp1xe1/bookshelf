@@ -1,4 +1,6 @@
 post:
+  security:
+    - BearerAuth: []
   operationId: completeBookDocumentUpload
   tags:
     - documents
@@ -22,6 +24,18 @@ post:
             $ref: ../components/schemas/Problem.yaml
     '422':
       description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/Problem.yaml
+    '401':
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/Problem.yaml
+    '403':
+      description: Forbidden
       content:
         application/json:
           schema:

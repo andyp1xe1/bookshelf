@@ -59,7 +59,7 @@ func main() {
 	si := api.NewStrictHandler(&HandlerWrapper{
 		BookHandler:     bookHandler,
 		DocumentHandler: documentHandler,
-	}, nil)
+	}, []api.StrictMiddlewareFunc{})
 
 	api.RegisterHandlers(app, si)
 

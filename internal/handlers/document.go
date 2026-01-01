@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/andyp1xe1/bookshelf/internal/api"
+	"github.com/andyp1xe1/bookshelf/internal/auth"
 	"github.com/andyp1xe1/bookshelf/internal/services"
 )
 
@@ -12,12 +13,20 @@ var NotFoundProblem = api.Problem{
 	Title: "Not found",
 }
 
+var UnauthorizedProblem = api.Problem{
+	Title: "Unauthorized",
+}
+var ForbiddenProblem = api.Problem{
+	Title: "Forbidden",
+}
+
 type DocumentService interface {
+	PresignUpload(ctx context.Context, userID string, bookID, sizeBytes int64, checksum, contentType, filename string) (*api.DocumentPresignResponse, error)
+	CompleteUpload(ctx context.Context, userID string, bookID, documentID int64) (*api.Document, error)
+	DeleteByID(ctx context.Context, userID string, bookID, documentID int64) error
+
 	ListByBook(ctx context.Context, bookID int64, offset, limit int32) (*api.DocumentList, error)
-	PresignUpload(ctx context.Context, bookID, sizeBytes int64, checksum, contentType, filename string) (*api.DocumentPresignResponse, error)
-	CompleteUpload(ctx context.Context, bookID, documentID int64) (*api.Document, error)
 	GetDocMeta(ctx context.Context, bookID, documentID int64) (*api.Document, error)
-	DeleteByID(ctx context.Context, bookID, documentID int64) error
 	Download(ctx context.Context, bookID, documentID int64) (string, error)
 }
 
@@ -43,21 +52,19 @@ func (h *DocumentHandler) ListBookDocuments(ctx context.Context, request api.Lis
 }
 
 func (h *DocumentHandler) CreateBookDocumentPresign(ctx context.Context, request api.CreateBookDocumentPresignRequestObject) (api.CreateBookDocumentPresignResponseObject, error) {
-	if request.Body == nil {
-		detail := "body is required"
-		return api.CreateBookDocumentPresign422JSONResponse{
-			Title:  "Validation error",
-			Detail: &detail,
-		}, nil
+	authData, ok := auth.GetAuthData(ctx)
+	if !ok {
+		return api.CreateBookDocumentPresign401JSONResponse(UnauthorizedProblem), nil
 	}
+	ctx = context.WithValue(ctx, "userID", authData.ID)
 
 	id := request.BookID
-	filename := request.Body.Filename
 	size := request.Body.SizeBytes
 	checksumHex := request.Body.ChecksumSha256Hex
 	contentType := string(request.Body.ContentType)
+	filename := request.Body.Filename
 
-	presignResp, err := h.service.PresignUpload(ctx, id, size, checksumHex, contentType, filename)
+	presignResp, err := h.service.PresignUpload(ctx, authData.ID, id, size, checksumHex, contentType, filename)
 	if err != nil {
 		detail := err.Error()
 		return api.CreateBookDocumentPresign422JSONResponse{
@@ -72,7 +79,11 @@ func (h *DocumentHandler) CreateBookDocumentPresign(ctx context.Context, request
 }
 
 func (h *DocumentHandler) DeleteBookDocumentByID(ctx context.Context, request api.DeleteBookDocumentByIDRequestObject) (api.DeleteBookDocumentByIDResponseObject, error) {
-	err := h.service.DeleteByID(ctx, request.BookID, request.DocumentID)
+	authData, ok := auth.GetAuthData(ctx)
+	if !ok {
+		return api.DeleteBookDocumentByID401JSONResponse(UnauthorizedProblem), nil
+	}
+	err := h.service.DeleteByID(ctx, authData.ID, request.BookID, request.DocumentID)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +107,11 @@ func (h *DocumentHandler) GetBookDocumentByID(ctx context.Context, request api.G
 }
 
 func (h *DocumentHandler) CompleteBookDocumentUpload(ctx context.Context, request api.CompleteBookDocumentUploadRequestObject) (api.CompleteBookDocumentUploadResponseObject, error) {
-	doc, err := h.service.CompleteUpload(ctx, request.BookID, request.DocumentID)
+	authData, ok := auth.GetAuthData(ctx)
+	if !ok {
+		return api.CompleteBookDocumentUpload401JSONResponse(UnauthorizedProblem), nil
+	}
+	doc, err := h.service.CompleteUpload(ctx, authData.ID, request.BookID, request.DocumentID)
 	if err != nil {
 		detail := err.Error()
 		return api.CompleteBookDocumentUpload422JSONResponse{
