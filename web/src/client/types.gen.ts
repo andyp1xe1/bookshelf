@@ -125,6 +125,14 @@ export type CreateBookData = {
 
 export type CreateBookErrors = {
     /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
      * Validation error
      */
     422: Problem;
@@ -174,6 +182,14 @@ export type DeleteBookByIdData = {
 };
 
 export type DeleteBookByIdErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
     /**
      * Book not found
      */
@@ -234,6 +250,14 @@ export type UpdateBookData = {
 };
 
 export type UpdateBookErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
     /**
      * Book not found
      */
@@ -302,6 +326,14 @@ export type CreateBookDocumentPresignData = {
 
 export type CreateBookDocumentPresignErrors = {
     /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
+    /**
      * Book not found
      */
     404: Problem;
@@ -339,6 +371,14 @@ export type DeleteBookDocumentByIdData = {
 };
 
 export type DeleteBookDocumentByIdErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
     /**
      * Document not found
      */
@@ -407,6 +447,14 @@ export type CompleteBookDocumentUploadData = {
 };
 
 export type CompleteBookDocumentUploadErrors = {
+    /**
+     * Unauthorized
+     */
+    401: Problem;
+    /**
+     * Forbidden
+     */
+    403: Problem;
     /**
      * Document not found
      */

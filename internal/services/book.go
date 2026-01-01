@@ -2,11 +2,13 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 
 	"github.com/andyp1xe1/bookshelf/internal/api"
 	"github.com/andyp1xe1/bookshelf/internal/store"
+	"github.com/jackc/pgx/v5"
 )
 
 type BookStore interface {
@@ -59,21 +61,29 @@ func (s *BookService) Create(ctx context.Context, userID string, in api.BookCrea
 func (s *BookService) Get(ctx context.Context, id int64) (api.Book, bool, error) {
 	record, err := s.books.GetBook(ctx, id)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return api.Book{}, false, nil
+		}
 		return api.Book{}, false, err
 	}
 	return recordToAPI(record), true, nil
 }
 
 func (s *BookService) Update(ctx context.Context, userID string, id int64, in api.BookUpdate) (api.Book, bool, error) {
-	_, err := s.books.GetBook(ctx, id)
-
+	existing, err := s.books.GetBook(ctx, id)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return api.Book{}, false, nil
+		}
 		return api.Book{}, false, err
+	}
+	if existing.UserID != userID {
+		return api.Book{}, true, ErrForbidden
 	}
 
 	year, err := parsePublishedYear(in.PublishedYear)
 	if err != nil {
-		return api.Book{}, false, err
+		return api.Book{}, true, err
 	}
 
 	record, err := s.books.UpdateBook(ctx, store.UpdateBookParams{
@@ -86,13 +96,27 @@ func (s *BookService) Update(ctx context.Context, userID string, id int64, in ap
 		Genre:         in.Genre,
 	})
 	if err != nil {
-		return api.Book{}, false, err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return api.Book{}, false, nil
+		}
+		return api.Book{}, true, err
 	}
 
 	return recordToAPI(record), true, nil
 }
 
 func (s *BookService) Delete(ctx context.Context, userID string, id int64) (bool, error) {
+	existing, err := s.books.GetBook(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+	if existing.UserID != userID {
+		return false, ErrForbidden
+	}
+
 	deleted, err := s.books.DeleteBook(ctx, store.DeleteBookParams{
 		ID:     id,
 		UserID: userID,

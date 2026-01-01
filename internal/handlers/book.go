@@ -3,9 +3,11 @@ package handlers
 
 import (
 	"context"
+	"errors"
 
 	"github.com/andyp1xe1/bookshelf/internal/api"
 	"github.com/andyp1xe1/bookshelf/internal/auth"
+	"github.com/andyp1xe1/bookshelf/internal/services"
 )
 
 type BookService interface {
@@ -81,6 +83,9 @@ func (h *BookHandler) UpdateBook(ctx context.Context, in api.UpdateBookRequestOb
 	}
 	book, found, err := h.service.Update(ctx, authData.ID, in.BookID, *in.Body)
 	if err != nil {
+		if errors.Is(err, services.ErrForbidden) {
+			return api.UpdateBook403JSONResponse(ForbiddenProblem), nil
+		}
 		detail := err.Error()
 		return api.UpdateBook422JSONResponse{
 			Title:  "Validation error",
@@ -104,6 +109,9 @@ func (h *BookHandler) DeleteBookByID(ctx context.Context, in api.DeleteBookByIDR
 	}
 	deleted, err := h.service.Delete(ctx, authData.ID, in.BookID)
 	if err != nil {
+		if errors.Is(err, services.ErrForbidden) {
+			return api.DeleteBookByID403JSONResponse(ForbiddenProblem), nil
+		}
 		return nil, err
 	}
 	if !deleted {

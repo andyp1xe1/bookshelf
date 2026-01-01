@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"time"
@@ -36,6 +35,7 @@ var (
 type DocumentStore interface {
 	CreateDocument(ctx context.Context, arg store.CreateDocumentParams) (store.Document, error)
 	DeleteDocument(ctx context.Context, arg store.DeleteDocumentParams) (int64, error)
+	GetBook(ctx context.Context, id int64) (store.Book, error)
 	GetDocument(ctx context.Context, id int64) (store.Document, error)
 	GetDocumentByObjectKey(ctx context.Context, objectKey string) (store.Document, error)
 	InsertOrUpdateDocument(ctx context.Context, arg store.InsertOrUpdateDocumentParams) (store.Document, error)
@@ -53,10 +53,6 @@ func newS3Client() (*s3Client, error) {
 	accID := os.Getenv("CLOUDFLARE_R2_ACCOUNT_ID")
 	accessKeySecret := os.Getenv("CLOUDFLARE_R2_ACCESS_KEY_SECRET")
 	accessKeyID := os.Getenv("CLOUDFLARE_R2_ACCESS_KEY_ID")
-
-	log.Printf("R2 Access Key ID: %s", accessKeyID)
-	log.Printf("R2 Account ID: %s", accID)
-	log.Printf("R2 Access Key Secret: %s", accessKeySecret)
 
 	creds := credentials.NewStaticCredentialsProvider(accessKeyID, accessKeySecret, "")
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
@@ -88,6 +84,20 @@ func NewDocumentService(store DocumentStore) (service *DocumentService, err erro
 		docs:     store,
 	}
 	return
+}
+
+func (s *DocumentService) getOwnedBook(ctx context.Context, userID string, bookID int64) (store.Book, bool, error) {
+	book, err := s.docs.GetBook(ctx, bookID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return store.Book{}, false, nil
+		}
+		return store.Book{}, false, err
+	}
+	if book.UserID != userID {
+		return store.Book{}, true, ErrForbidden
+	}
+	return book, true, nil
 }
 
 func (s *DocumentService) ListByBook(ctx context.Context, bookID int64, offset, limit int32) (*api.DocumentList, error) {
@@ -135,6 +145,14 @@ func checksumHexToBase64(checksumHex string) (string, error) {
 }
 
 func (s *DocumentService) PresignUpload(ctx context.Context, userID string, bookID, sizeBytes int64, checksumHex string, contentType string, filename string) (*api.DocumentPresignResponse, error) {
+	_, found, err := s.getOwnedBook(ctx, userID, bookID)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, nil
+	}
+
 	if sizeBytes > MaxDocumentSizeBytes {
 		return nil, ErrDocSizeExceeded
 	}
@@ -168,6 +186,7 @@ func (s *DocumentService) PresignUpload(ctx context.Context, userID string, book
 
 	docRecord, err := s.docs.InsertOrUpdateDocument(ctx, store.InsertOrUpdateDocumentParams{
 		BookID:      &bookID,
+		UserID:      userID,
 		Filename:    filename,
 		ObjectKey:   objectKey,
 		ContentType: contentType,
@@ -188,7 +207,13 @@ func (s *DocumentService) PresignUpload(ctx context.Context, userID string, book
 }
 
 func (s *DocumentService) CompleteUpload(ctx context.Context, userID string, bookID, documentID int64) (*api.Document, error) {
-	var err error
+	_, found, err := s.getOwnedBook(ctx, userID, bookID)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, nil
+	}
 
 	docRecord, err := s.docs.GetDocument(ctx, documentID)
 	if err != nil {
@@ -199,7 +224,7 @@ func (s *DocumentService) CompleteUpload(ctx context.Context, userID string, boo
 	}
 
 	if docRecord.BookID == nil || *docRecord.BookID != bookID {
-		return nil, fmt.Errorf("document %d does not belong to book %d", documentID, bookID)
+		return nil, nil
 	}
 
 	s3Obj, err := s.s3Client.HeadObject(ctx, &s3.HeadObjectInput{
@@ -223,6 +248,7 @@ func (s *DocumentService) CompleteUpload(ctx context.Context, userID string, boo
 
 	updatedRecord, err := s.docs.UpdateDocumentStatus(ctx, store.UpdateDocumentStatusParams{
 		ID:     documentID,
+		UserID: userID,
 		Status: status,
 	})
 	if err != nil {
@@ -231,7 +257,7 @@ func (s *DocumentService) CompleteUpload(ctx context.Context, userID string, boo
 	if checkErr != nil {
 		return nil, checkErr
 	}
-	return documentToAPIPtr(updatedRecord), err
+	return documentToAPIPtr(updatedRecord), nil
 }
 
 func (s *DocumentService) GetDocMeta(ctx context.Context, bookID, documentID int64) (*api.Document, error) {
@@ -251,6 +277,14 @@ func (s *DocumentService) GetDocMeta(ctx context.Context, bookID, documentID int
 }
 
 func (s *DocumentService) DeleteByID(ctx context.Context, userID string, bookID, documentID int64) error {
+	_, found, err := s.getOwnedBook(ctx, userID, bookID)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return ErrDocNotFound
+	}
+
 	docRecord, err := s.docs.GetDocument(ctx, documentID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -260,7 +294,7 @@ func (s *DocumentService) DeleteByID(ctx context.Context, userID string, bookID,
 	}
 
 	if docRecord.BookID == nil || *docRecord.BookID != bookID {
-		return fmt.Errorf("document %d does not belong to book %d", documentID, bookID)
+		return ErrDocNotFound
 	}
 
 	_, err = s.s3Client.DeleteObject(ctx, &s3.DeleteObjectInput{

@@ -56,7 +56,6 @@ func (h *DocumentHandler) CreateBookDocumentPresign(ctx context.Context, request
 	if !ok {
 		return api.CreateBookDocumentPresign401JSONResponse(UnauthorizedProblem), nil
 	}
-	ctx = context.WithValue(ctx, "userID", authData.ID)
 
 	id := request.BookID
 	size := request.Body.SizeBytes
@@ -66,6 +65,9 @@ func (h *DocumentHandler) CreateBookDocumentPresign(ctx context.Context, request
 
 	presignResp, err := h.service.PresignUpload(ctx, authData.ID, id, size, checksumHex, contentType, filename)
 	if err != nil {
+		if errors.Is(err, services.ErrForbidden) {
+			return api.CreateBookDocumentPresign403JSONResponse(ForbiddenProblem), nil
+		}
 		detail := err.Error()
 		return api.CreateBookDocumentPresign422JSONResponse{
 			Title:  "Validation error",
@@ -85,6 +87,12 @@ func (h *DocumentHandler) DeleteBookDocumentByID(ctx context.Context, request ap
 	}
 	err := h.service.DeleteByID(ctx, authData.ID, request.BookID, request.DocumentID)
 	if err != nil {
+		if errors.Is(err, services.ErrForbidden) {
+			return api.DeleteBookDocumentByID403JSONResponse(ForbiddenProblem), nil
+		}
+		if errors.Is(err, services.ErrDocNotFound) {
+			return api.DeleteBookDocumentByID404JSONResponse(NotFoundProblem), nil
+		}
 		return nil, err
 	}
 	return api.DeleteBookDocumentByID204Response{}, nil
@@ -113,13 +121,9 @@ func (h *DocumentHandler) CompleteBookDocumentUpload(ctx context.Context, reques
 	}
 	doc, err := h.service.CompleteUpload(ctx, authData.ID, request.BookID, request.DocumentID)
 	if err != nil {
-		detail := err.Error()
-		return api.CompleteBookDocumentUpload422JSONResponse{
-			Title:  "Validation error",
-			Detail: &detail,
-		}, nil
-	}
-	if errors.Is(err, services.ErrDocInvalidation) {
+		if errors.Is(err, services.ErrForbidden) {
+			return api.CompleteBookDocumentUpload403JSONResponse(ForbiddenProblem), nil
+		}
 		detail := err.Error()
 		return api.CompleteBookDocumentUpload422JSONResponse{
 			Title:  "Validation error",

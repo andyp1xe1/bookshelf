@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+
 	"github.com/andyp1xe1/bookshelf/internal/api"
+	"github.com/andyp1xe1/bookshelf/internal/auth"
 	"github.com/andyp1xe1/bookshelf/internal/handlers"
 	"github.com/andyp1xe1/bookshelf/internal/services"
 	"github.com/andyp1xe1/bookshelf/internal/store"
@@ -59,7 +61,7 @@ func main() {
 	si := api.NewStrictHandler(&HandlerWrapper{
 		BookHandler:     bookHandler,
 		DocumentHandler: documentHandler,
-	}, []api.StrictMiddlewareFunc{})
+	}, []api.StrictMiddlewareFunc{auth.AuthMiddleware})
 
 	api.RegisterHandlers(app, si)
 

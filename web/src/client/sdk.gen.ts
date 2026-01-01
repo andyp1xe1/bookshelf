@@ -44,7 +44,11 @@ export const searchBooks = <ThrowOnError extends boolean = false>(options: Optio
 /**
  * Delete book by id
  */
-export const deleteBookById = <ThrowOnError extends boolean = false>(options: Options<DeleteBookByIdData, ThrowOnError>) => (options.client ?? client).delete<DeleteBookByIdResponses, DeleteBookByIdErrors, ThrowOnError>({ url: '/books/{bookID}', ...options });
+export const deleteBookById = <ThrowOnError extends boolean = false>(options: Options<DeleteBookByIdData, ThrowOnError>) => (options.client ?? client).delete<DeleteBookByIdResponses, DeleteBookByIdErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/books/{bookID}',
+    ...options
+});
 
 /**
  * Get book by id
@@ -55,6 +59,7 @@ export const getBookById = <ThrowOnError extends boolean = false>(options: Optio
  * Replace a book by id
  */
 export const updateBook = <ThrowOnError extends boolean = false>(options: Options<UpdateBookData, ThrowOnError>) => (options.client ?? client).put<UpdateBookResponses, UpdateBookErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
     url: '/books/{bookID}',
     ...options,
     headers: {

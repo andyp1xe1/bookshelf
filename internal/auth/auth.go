@@ -37,8 +37,9 @@ func AuthMiddleware(f api.StrictHandlerFunc, operationID string) api.StrictHandl
 		header := ctx.Request().Header.Peek("Authorization")
 		token := strings.TrimPrefix(string(header), "Bearer ")
 		if token == "" {
-			ctx.Response().SetStatusCode(fiber.StatusUnauthorized)
-			ctx.WriteString("unauthorized: missing token")
+			detail := "missing token"
+			ctx.Status(fiber.StatusUnauthorized)
+			_ = ctx.JSON(api.Problem{Title: "Unauthorized", Status: fiber.StatusUnauthorized, Detail: &detail})
 			return nil, nil
 		}
 
@@ -46,14 +47,16 @@ func AuthMiddleware(f api.StrictHandlerFunc, operationID string) api.StrictHandl
 			Token: string(token),
 		})
 		if err != nil {
-			ctx.Response().SetStatusCode(fiber.StatusUnauthorized)
-			ctx.WriteString("unauthorized: invalid token")
+			detail := "invalid token"
+			ctx.Status(fiber.StatusUnauthorized)
+			_ = ctx.JSON(api.Problem{Title: "Unauthorized", Status: fiber.StatusUnauthorized, Detail: &detail})
 			return nil, nil
 		}
 		usr, err := user.Get(ctx.Context(), claims.Subject)
 		if err != nil {
-			ctx.Response().SetStatusCode(fiber.StatusUnauthorized)
-			ctx.WriteString("unauthorized: user not found")
+			detail := "user not found"
+			ctx.Status(fiber.StatusUnauthorized)
+			_ = ctx.JSON(api.Problem{Title: "Unauthorized", Status: fiber.StatusUnauthorized, Detail: &detail})
 			return nil, nil
 		}
 		var email string
