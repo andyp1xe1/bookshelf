@@ -6,6 +6,7 @@ create table books (
   published_year int not null,
   isbn text not null unique,
   genre text,
+  cover_object_key text,
   created_at timestamptz not null default now()
 );
 

@@ -5,14 +5,16 @@ insert into books (
   author,
   published_year,
   isbn,
-  genre
+  genre,
+  cover_object_key
 ) values (
   $1,
   $2,
   $3,
   $4,
   $5,
-  $6
+  $6,
+  $7
 )
 returning id,
           user_id,
@@ -21,6 +23,7 @@ returning id,
           published_year,
           isbn,
           genre,
+          cover_object_key,
           created_at;
 
 -- name: GetBook :one
@@ -31,6 +34,7 @@ select id,
         published_year,
         isbn,
         genre,
+        cover_object_key,
         created_at
 from books
 where id = $1;
@@ -41,7 +45,8 @@ set title = $3,
     author = $4,
     published_year = $5,
     isbn = $6,
-    genre = $7
+    genre = $7,
+    cover_object_key = $8
 where id = $1 and user_id = $2
 returning id,
           user_id,
@@ -50,6 +55,7 @@ returning id,
           published_year,
           isbn,
           genre,
+          cover_object_key,
           created_at;
 
 -- name: DeleteBook :execrows
@@ -64,6 +70,7 @@ select id,
        published_year,
        isbn,
        genre,
+       cover_object_key,
        created_at
 from books
 order by id
@@ -81,6 +88,7 @@ select id,
        published_year,
        isbn,
        genre,
+       cover_object_key,
        created_at
 from books
 where title ilike '%' || $1 || '%' or author ilike '%' || $1 || '%'
