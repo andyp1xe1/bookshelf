@@ -6,11 +6,23 @@ export type ClientOptions = {
 
 export type Book = {
     id: number;
+    /**
+     * Clerk user ID of book owner
+     */
+    userId: string;
     title: string;
     author: string;
     publishedYear: string;
     isbn: string;
     genre?: string;
+    /**
+     * R2 object key for book cover image
+     */
+    coverObjectKey?: string;
+    /**
+     * Presigned URL for cover image
+     */
+    coverUrl?: string;
 };
 
 export type BookList = {
@@ -32,6 +44,33 @@ export type Problem = {
     status: number;
     detail?: string;
     instance?: string;
+};
+
+export type BookMetadata = {
+    /**
+     * Book title from OpenLibrary
+     */
+    title: string;
+    /**
+     * Book author (first author if multiple)
+     */
+    author: string;
+    /**
+     * Year the book was published
+     */
+    publishedYear?: string;
+    /**
+     * Primary genre/subject
+     */
+    genre?: string;
+    /**
+     * URL to cover image from OpenLibrary
+     */
+    coverUrl?: string;
+    /**
+     * R2 object key if cover was uploaded
+     */
+    coverObjectKey?: string;
 };
 
 export type BookUpdate = {
@@ -168,6 +207,40 @@ export type SearchBooksResponses = {
 };
 
 export type SearchBooksResponse = SearchBooksResponses[keyof SearchBooksResponses];
+
+export type LookupBookByIsbnData = {
+    body?: never;
+    path: {
+        /**
+         * ISBN to lookup (with or without dashes)
+         */
+        isbn: string;
+    };
+    query?: never;
+    url: '/books/lookup/{isbn}';
+};
+
+export type LookupBookByIsbnErrors = {
+    /**
+     * ISBN not found in OpenLibrary
+     */
+    404: Problem;
+    /**
+     * Internal server error
+     */
+    500: Problem;
+};
+
+export type LookupBookByIsbnError = LookupBookByIsbnErrors[keyof LookupBookByIsbnErrors];
+
+export type LookupBookByIsbnResponses = {
+    /**
+     * Book metadata found
+     */
+    200: BookMetadata;
+};
+
+export type LookupBookByIsbnResponse = LookupBookByIsbnResponses[keyof LookupBookByIsbnResponses];
 
 export type DeleteBookByIdData = {
     body?: never;

@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { completeBookDocumentUpload, createBook, createBookDocumentPresign, deleteBookById, deleteBookDocumentById, downloadBookDocument, getBookById, getBookDocumentById, listBookDocuments, listBooks, type Options, searchBooks, updateBook } from '../sdk.gen';
-import type { CompleteBookDocumentUploadData, CompleteBookDocumentUploadError, CompleteBookDocumentUploadResponse, CreateBookData, CreateBookDocumentPresignData, CreateBookDocumentPresignError, CreateBookDocumentPresignResponse, CreateBookError, CreateBookResponse, DeleteBookByIdData, DeleteBookByIdError, DeleteBookByIdResponse, DeleteBookDocumentByIdData, DeleteBookDocumentByIdError, DeleteBookDocumentByIdResponse, DownloadBookDocumentData, DownloadBookDocumentError, GetBookByIdData, GetBookByIdError, GetBookByIdResponse, GetBookDocumentByIdData, GetBookDocumentByIdError, GetBookDocumentByIdResponse, ListBookDocumentsData, ListBookDocumentsError, ListBookDocumentsResponse, ListBooksData, ListBooksResponse, SearchBooksData, SearchBooksResponse, UpdateBookData, UpdateBookError, UpdateBookResponse } from '../types.gen';
+import { completeBookDocumentUpload, createBook, createBookDocumentPresign, deleteBookById, deleteBookDocumentById, downloadBookDocument, getBookById, getBookDocumentById, listBookDocuments, listBooks, lookupBookByIsbn, type Options, searchBooks, updateBook } from '../sdk.gen';
+import type { CompleteBookDocumentUploadData, CompleteBookDocumentUploadError, CompleteBookDocumentUploadResponse, CreateBookData, CreateBookDocumentPresignData, CreateBookDocumentPresignError, CreateBookDocumentPresignResponse, CreateBookError, CreateBookResponse, DeleteBookByIdData, DeleteBookByIdError, DeleteBookByIdResponse, DeleteBookDocumentByIdData, DeleteBookDocumentByIdError, DeleteBookDocumentByIdResponse, DownloadBookDocumentData, DownloadBookDocumentError, GetBookByIdData, GetBookByIdError, GetBookByIdResponse, GetBookDocumentByIdData, GetBookDocumentByIdError, GetBookDocumentByIdResponse, ListBookDocumentsData, ListBookDocumentsError, ListBookDocumentsResponse, ListBooksData, ListBooksResponse, LookupBookByIsbnData, LookupBookByIsbnError, LookupBookByIsbnResponse, SearchBooksData, SearchBooksResponse, UpdateBookData, UpdateBookError, UpdateBookResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -173,6 +173,24 @@ export const searchBooksInfiniteOptions = (options: Options<SearchBooksData>) =>
         return data;
     },
     queryKey: searchBooksInfiniteQueryKey(options)
+});
+
+export const lookupBookByIsbnQueryKey = (options: Options<LookupBookByIsbnData>) => createQueryKey('lookupBookByIsbn', options);
+
+/**
+ * Lookup book metadata by ISBN from OpenLibrary
+ */
+export const lookupBookByIsbnOptions = (options: Options<LookupBookByIsbnData>) => queryOptions<LookupBookByIsbnResponse, LookupBookByIsbnError, LookupBookByIsbnResponse, ReturnType<typeof lookupBookByIsbnQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await lookupBookByIsbn({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: lookupBookByIsbnQueryKey(options)
 });
 
 /**

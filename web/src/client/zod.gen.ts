@@ -4,11 +4,14 @@ import { z } from 'zod';
 
 export const zBook = z.object({
     id: z.coerce.bigint(),
+    userId: z.string(),
     title: z.string(),
     author: z.string(),
     publishedYear: z.string(),
     isbn: z.string(),
-    genre: z.optional(z.string())
+    genre: z.optional(z.string()),
+    coverObjectKey: z.optional(z.string()),
+    coverUrl: z.optional(z.string())
 });
 
 export const zBookList = z.object({
@@ -30,6 +33,15 @@ export const zProblem = z.object({
     status: z.int(),
     detail: z.optional(z.string()),
     instance: z.optional(z.string())
+});
+
+export const zBookMetadata = z.object({
+    title: z.string(),
+    author: z.string(),
+    publishedYear: z.optional(z.string()),
+    genre: z.optional(z.string()),
+    coverUrl: z.optional(z.string()),
+    coverObjectKey: z.optional(z.string())
 });
 
 export const zBookUpdate = z.object({
@@ -132,6 +144,19 @@ export const zSearchBooksData = z.object({
  * Successful response
  */
 export const zSearchBooksResponse = zBookList;
+
+export const zLookupBookByIsbnData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        isbn: z.string()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * Book metadata found
+ */
+export const zLookupBookByIsbnResponse = zBookMetadata;
 
 export const zDeleteBookByIdData = z.object({
     body: z.optional(z.never()),

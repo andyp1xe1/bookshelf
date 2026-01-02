@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CompleteBookDocumentUploadData, CompleteBookDocumentUploadErrors, CompleteBookDocumentUploadResponses, CreateBookData, CreateBookDocumentPresignData, CreateBookDocumentPresignErrors, CreateBookDocumentPresignResponses, CreateBookErrors, CreateBookResponses, DeleteBookByIdData, DeleteBookByIdErrors, DeleteBookByIdResponses, DeleteBookDocumentByIdData, DeleteBookDocumentByIdErrors, DeleteBookDocumentByIdResponses, DownloadBookDocumentData, DownloadBookDocumentErrors, GetBookByIdData, GetBookByIdErrors, GetBookByIdResponses, GetBookDocumentByIdData, GetBookDocumentByIdErrors, GetBookDocumentByIdResponses, ListBookDocumentsData, ListBookDocumentsErrors, ListBookDocumentsResponses, ListBooksData, ListBooksResponses, SearchBooksData, SearchBooksResponses, UpdateBookData, UpdateBookErrors, UpdateBookResponses } from './types.gen';
+import type { CompleteBookDocumentUploadData, CompleteBookDocumentUploadErrors, CompleteBookDocumentUploadResponses, CreateBookData, CreateBookDocumentPresignData, CreateBookDocumentPresignErrors, CreateBookDocumentPresignResponses, CreateBookErrors, CreateBookResponses, DeleteBookByIdData, DeleteBookByIdErrors, DeleteBookByIdResponses, DeleteBookDocumentByIdData, DeleteBookDocumentByIdErrors, DeleteBookDocumentByIdResponses, DownloadBookDocumentData, DownloadBookDocumentErrors, GetBookByIdData, GetBookByIdErrors, GetBookByIdResponses, GetBookDocumentByIdData, GetBookDocumentByIdErrors, GetBookDocumentByIdResponses, ListBookDocumentsData, ListBookDocumentsErrors, ListBookDocumentsResponses, ListBooksData, ListBooksResponses, LookupBookByIsbnData, LookupBookByIsbnErrors, LookupBookByIsbnResponses, SearchBooksData, SearchBooksResponses, UpdateBookData, UpdateBookErrors, UpdateBookResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -40,6 +40,11 @@ export const createBook = <ThrowOnError extends boolean = false>(options: Option
  * Search books by title or author
  */
 export const searchBooks = <ThrowOnError extends boolean = false>(options: Options<SearchBooksData, ThrowOnError>) => (options.client ?? client).get<SearchBooksResponses, unknown, ThrowOnError>({ url: '/books/search', ...options });
+
+/**
+ * Lookup book metadata by ISBN from OpenLibrary
+ */
+export const lookupBookByIsbn = <ThrowOnError extends boolean = false>(options: Options<LookupBookByIsbnData, ThrowOnError>) => (options.client ?? client).get<LookupBookByIsbnResponses, LookupBookByIsbnErrors, ThrowOnError>({ url: '/books/lookup/{isbn}', ...options });
 
 /**
  * Delete book by id
