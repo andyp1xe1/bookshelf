@@ -91,14 +91,16 @@ insert into books (
   author,
   published_year,
   isbn,
-  genre
+  genre,
+  cover_object_key
 ) values (
   $1,
   $2,
   $3,
   $4,
   $5,
-  $6
+  $6,
+  $7
 )
 returning id,
           user_id,
@@ -107,16 +109,18 @@ returning id,
           published_year,
           isbn,
           genre,
+          cover_object_key,
           created_at
 `
 
 type CreateBookParams struct {
-	UserID        string  `json:"user_id"`
-	Title         string  `json:"title"`
-	Author        string  `json:"author"`
-	PublishedYear int32   `json:"published_year"`
-	Isbn          string  `json:"isbn"`
-	Genre         *string `json:"genre"`
+	UserID         string  `json:"user_id"`
+	Title          string  `json:"title"`
+	Author         string  `json:"author"`
+	PublishedYear  int32   `json:"published_year"`
+	Isbn           string  `json:"isbn"`
+	Genre          *string `json:"genre"`
+	CoverObjectKey *string `json:"cover_object_key"`
 }
 
 func (q *Queries) CreateBook(ctx context.Context, arg CreateBookParams) (Book, error) {
@@ -127,6 +131,7 @@ func (q *Queries) CreateBook(ctx context.Context, arg CreateBookParams) (Book, e
 		arg.PublishedYear,
 		arg.Isbn,
 		arg.Genre,
+		arg.CoverObjectKey,
 	)
 	var i Book
 	err := row.Scan(
@@ -137,6 +142,7 @@ func (q *Queries) CreateBook(ctx context.Context, arg CreateBookParams) (Book, e
 		&i.PublishedYear,
 		&i.Isbn,
 		&i.Genre,
+		&i.CoverObjectKey,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -277,6 +283,7 @@ select id,
         published_year,
         isbn,
         genre,
+        cover_object_key,
         created_at
 from books
 where id = $1
@@ -293,6 +300,7 @@ func (q *Queries) GetBook(ctx context.Context, id int64) (Book, error) {
 		&i.PublishedYear,
 		&i.Isbn,
 		&i.Genre,
+		&i.CoverObjectKey,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -445,6 +453,7 @@ select id,
        published_year,
        isbn,
        genre,
+       cover_object_key,
        created_at
 from books
 order by id
@@ -473,6 +482,7 @@ func (q *Queries) ListBooks(ctx context.Context, arg ListBooksParams) ([]Book, e
 			&i.PublishedYear,
 			&i.Isbn,
 			&i.Genre,
+			&i.CoverObjectKey,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -547,6 +557,7 @@ select id,
        published_year,
        isbn,
        genre,
+       cover_object_key,
        created_at
 from books
 where title ilike '%' || $1 || '%' or author ilike '%' || $1 || '%'
@@ -577,6 +588,7 @@ func (q *Queries) SearchBooks(ctx context.Context, arg SearchBooksParams) ([]Boo
 			&i.PublishedYear,
 			&i.Isbn,
 			&i.Genre,
+			&i.CoverObjectKey,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -595,7 +607,8 @@ set title = $3,
     author = $4,
     published_year = $5,
     isbn = $6,
-    genre = $7
+    genre = $7,
+    cover_object_key = $8
 where id = $1 and user_id = $2
 returning id,
           user_id,
@@ -604,17 +617,19 @@ returning id,
           published_year,
           isbn,
           genre,
+          cover_object_key,
           created_at
 `
 
 type UpdateBookParams struct {
-	ID            int64   `json:"id"`
-	UserID        string  `json:"user_id"`
-	Title         string  `json:"title"`
-	Author        string  `json:"author"`
-	PublishedYear int32   `json:"published_year"`
-	Isbn          string  `json:"isbn"`
-	Genre         *string `json:"genre"`
+	ID             int64   `json:"id"`
+	UserID         string  `json:"user_id"`
+	Title          string  `json:"title"`
+	Author         string  `json:"author"`
+	PublishedYear  int32   `json:"published_year"`
+	Isbn           string  `json:"isbn"`
+	Genre          *string `json:"genre"`
+	CoverObjectKey *string `json:"cover_object_key"`
 }
 
 func (q *Queries) UpdateBook(ctx context.Context, arg UpdateBookParams) (Book, error) {
@@ -626,6 +641,7 @@ func (q *Queries) UpdateBook(ctx context.Context, arg UpdateBookParams) (Book, e
 		arg.PublishedYear,
 		arg.Isbn,
 		arg.Genre,
+		arg.CoverObjectKey,
 	)
 	var i Book
 	err := row.Scan(
@@ -636,6 +652,7 @@ func (q *Queries) UpdateBook(ctx context.Context, arg UpdateBookParams) (Book, e
 		&i.PublishedYear,
 		&i.Isbn,
 		&i.Genre,
+		&i.CoverObjectKey,
 		&i.CreatedAt,
 	)
 	return i, err

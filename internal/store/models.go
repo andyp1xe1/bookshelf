@@ -9,14 +9,15 @@ import (
 )
 
 type Book struct {
-	ID            int64              `json:"id"`
-	UserID        string             `json:"user_id"`
-	Title         string             `json:"title"`
-	Author        string             `json:"author"`
-	PublishedYear int32              `json:"published_year"`
-	Isbn          string             `json:"isbn"`
-	Genre         *string            `json:"genre"`
-	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	ID             int64              `json:"id"`
+	UserID         string             `json:"user_id"`
+	Title          string             `json:"title"`
+	Author         string             `json:"author"`
+	PublishedYear  int32              `json:"published_year"`
+	Isbn           string             `json:"isbn"`
+	Genre          *string            `json:"genre"`
+	CoverObjectKey *string            `json:"cover_object_key"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
 type Document struct {
