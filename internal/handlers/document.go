@@ -25,7 +25,7 @@ type DocumentService interface {
 	CompleteUpload(ctx context.Context, userID string, bookID, documentID int64) (*api.Document, error)
 	DeleteByID(ctx context.Context, userID string, bookID, documentID int64) error
 
-	ListByBook(ctx context.Context, bookID int64, offset, limit int32) (*api.DocumentList, error)
+	ListByBook(ctx context.Context, userID string, bookID int64, offset, limit int32) (*api.DocumentList, error)
 	GetDocMeta(ctx context.Context, bookID, documentID int64) (*api.Document, error)
 	Download(ctx context.Context, bookID, documentID int64) (string, error)
 }
@@ -39,9 +39,14 @@ func NewDocumentHandler(service DocumentService) *DocumentHandler {
 }
 
 func (h *DocumentHandler) ListBookDocuments(ctx context.Context, request api.ListBookDocumentsRequestObject) (api.ListBookDocumentsResponseObject, error) {
+	var userID string
+	if authData, ok := auth.GetAuthData(ctx); ok {
+		userID = authData.ID
+	}
+	_ = userID
 	limit, offset := normalizeLimitOffset(request.Params.Limit, request.Params.Offset)
 	id := request.BookID
-	docs, err := h.service.ListByBook(ctx, id, offset, limit)
+	docs, err := h.service.ListByBook(ctx, userID, id, offset, limit)
 	if err != nil {
 		return nil, err
 	}

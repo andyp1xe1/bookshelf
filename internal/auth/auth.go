@@ -30,13 +30,17 @@ func GetAuthData(ctx context.Context) (*AuthData, bool) {
 }
 
 func AuthMiddleware(f api.StrictHandlerFunc, operationID string) api.StrictHandlerFunc {
-	return func(ctx *fiber.Ctx, args interface{}) (interface{}, error) {
-		if ctx.Context().UserValue(api.BearerAuthScopes) == nil {
-			return f(ctx, args)
+	return func(ctx *fiber.Ctx, args any) (any, error) {
+		var mustAuth bool
+		if ctx.Context().UserValue(api.BearerAuthScopes) != nil {
+			mustAuth = true
 		}
 		header := ctx.Request().Header.Peek("Authorization")
 		token := strings.TrimPrefix(string(header), "Bearer ")
 		if token == "" {
+			if !mustAuth {
+				return f(ctx, args)
+			}
 			detail := "missing token"
 			ctx.Status(fiber.StatusUnauthorized)
 			_ = ctx.JSON(api.Problem{Title: "Unauthorized", Status: fiber.StatusUnauthorized, Detail: &detail})

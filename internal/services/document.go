@@ -100,7 +100,7 @@ func (s *DocumentService) getOwnedBook(ctx context.Context, userID string, bookI
 	return book, true, nil
 }
 
-func (s *DocumentService) ListByBook(ctx context.Context, bookID int64, offset, limit int32) (*api.DocumentList, error) {
+func (s *DocumentService) ListByBook(ctx context.Context, userID string, bookID int64, offset, limit int32) (*api.DocumentList, error) {
 	records, err := s.docs.ListDocumentsByBook(ctx, store.ListDocumentsByBookParams{
 		BookID: &bookID,
 		Limit:  limit,
@@ -108,6 +108,20 @@ func (s *DocumentService) ListByBook(ctx context.Context, bookID int64, offset, 
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	if userID != "" {
+		var filtered []store.Document
+		book, found, err := s.getOwnedBook(ctx, userID, bookID)
+		if err != nil {
+			return nil, err
+		}
+		for _, r := range records {
+			if (!found || book.UserID != userID) && r.Status == "uploaded" {
+				filtered = append(filtered, r)
+			}
+		}
+		records = filtered
 	}
 
 	var docs []api.Document
@@ -272,7 +286,7 @@ func (s *DocumentService) GetDocMeta(ctx context.Context, bookID, documentID int
 	if docRecord.BookID == nil || *docRecord.BookID != bookID {
 		return nil, fmt.Errorf("document %d does not belong to book %d", documentID, bookID)
 	}
-
+	return documentToAPIPtr(docRecord), nil
 	return documentToAPIPtr(docRecord), nil
 }
 

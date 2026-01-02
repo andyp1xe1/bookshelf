@@ -3,17 +3,19 @@ package main
 import (
 	"context"
 
-	"github.com/andyp1xe1/bookshelf/internal/api"
-	"github.com/andyp1xe1/bookshelf/internal/auth"
-	"github.com/andyp1xe1/bookshelf/internal/handlers"
-	"github.com/andyp1xe1/bookshelf/internal/services"
-	"github.com/andyp1xe1/bookshelf/internal/store"
 	"log"
 	"math/rand"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/andyp1xe1/bookshelf/internal/api"
+	"github.com/andyp1xe1/bookshelf/internal/auth"
+	"github.com/andyp1xe1/bookshelf/internal/handlers"
+	"github.com/andyp1xe1/bookshelf/internal/services"
+	"github.com/andyp1xe1/bookshelf/internal/store"
+	"github.com/clerk/clerk-sdk-go/v2"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -44,6 +46,8 @@ func main() {
 	}
 
 	defer pool.Close()
+
+	clerk.SetKey(os.Getenv("CLERK_SECRET_KEY"))
 
 	app := fiber.New()
 	app.Use(cors.New())
