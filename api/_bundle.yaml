@@ -113,6 +113,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BookList'
+  /books/lookup/{isbn}:
+    get:
+      summary: Lookup book metadata by ISBN from OpenLibrary
+      operationId: lookupBookByISBN
+      tags:
+        - books
+      parameters:
+        - name: isbn
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ISBN to lookup (with or without dashes)
+      responses:
+        '200':
+          description: Book metadata found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookMetadata'
+        '404':
+          description: ISBN not found in OpenLibrary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /books/{bookID}:
     get:
       operationId: getBookByID
@@ -431,10 +463,14 @@ components:
         - author
         - publishedYear
         - isbn
+        - userId
       properties:
         id:
           type: integer
           format: int64
+        userId:
+          type: string
+          description: Clerk user ID of book owner
         title:
           type: string
         author:
@@ -445,6 +481,12 @@ components:
           type: string
         genre:
           type: string
+        coverObjectKey:
+          type: string
+          description: R2 object key for book cover image
+        coverUrl:
+          type: string
+          description: Presigned URL for cover image
     BookList:
       type: object
       required:
@@ -493,6 +535,30 @@ components:
           type: string
         instance:
           type: string
+    BookMetadata:
+      type: object
+      required:
+        - title
+        - author
+      properties:
+        title:
+          type: string
+          description: Book title from OpenLibrary
+        author:
+          type: string
+          description: Book author (first author if multiple)
+        publishedYear:
+          type: string
+          description: Year the book was published
+        genre:
+          type: string
+          description: Primary genre/subject
+        coverUrl:
+          type: string
+          description: URL to cover image from OpenLibrary
+        coverObjectKey:
+          type: string
+          description: R2 object key if cover was uploaded
     BookUpdate:
       type: object
       required:

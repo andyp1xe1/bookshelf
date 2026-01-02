@@ -16,6 +16,8 @@ paths:
     $ref: paths/books.yaml
   /books/search:
     $ref: paths/books_search.yaml
+  /books/lookup/{isbn}:
+    $ref: paths/books_lookup_{isbn}.yaml
   /books/{bookID}:
     $ref: paths/books_{bookID}.yaml
   /books/{bookID}/documents:

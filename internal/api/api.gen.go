@@ -39,12 +39,21 @@ const (
 
 // Book defines model for Book.
 type Book struct {
-	Author        string  `json:"author"`
+	Author string `json:"author"`
+
+	// CoverObjectKey R2 object key for book cover image
+	CoverObjectKey *string `json:"coverObjectKey,omitempty"`
+
+	// CoverUrl Presigned URL for cover image
+	CoverUrl      *string `json:"coverUrl,omitempty"`
 	Genre         *string `json:"genre,omitempty"`
 	Id            int64   `json:"id"`
 	Isbn          string  `json:"isbn"`
 	PublishedYear string  `json:"publishedYear"`
 	Title         string  `json:"title"`
+
+	// UserId Clerk user ID of book owner
+	UserId string `json:"userId"`
 }
 
 // BookCreate defines model for BookCreate.
@@ -60,6 +69,27 @@ type BookCreate struct {
 type BookList struct {
 	Items []Book `json:"items"`
 	Total int64  `json:"total"`
+}
+
+// BookMetadata defines model for BookMetadata.
+type BookMetadata struct {
+	// Author Book author (first author if multiple)
+	Author string `json:"author"`
+
+	// CoverObjectKey R2 object key if cover was uploaded
+	CoverObjectKey *string `json:"coverObjectKey,omitempty"`
+
+	// CoverUrl URL to cover image from OpenLibrary
+	CoverUrl *string `json:"coverUrl,omitempty"`
+
+	// Genre Primary genre/subject
+	Genre *string `json:"genre,omitempty"`
+
+	// PublishedYear Year the book was published
+	PublishedYear *string `json:"publishedYear,omitempty"`
+
+	// Title Book title from OpenLibrary
+	Title string `json:"title"`
 }
 
 // BookUpdate defines model for BookUpdate.
@@ -171,6 +201,9 @@ type ServerInterface interface {
 	// Create a new book
 	// (POST /books)
 	CreateBook(c *fiber.Ctx) error
+	// Lookup book metadata by ISBN from OpenLibrary
+	// (GET /books/lookup/{isbn})
+	LookupBookByISBN(c *fiber.Ctx, isbn string) error
 	// Search books by title or author
 	// (GET /books/search)
 	SearchBooks(c *fiber.Ctx, params SearchBooksParams) error
@@ -247,6 +280,22 @@ func (siw *ServerInterfaceWrapper) CreateBook(c *fiber.Ctx) error {
 	c.Context().SetUserValue(BearerAuthScopes, []string{})
 
 	return siw.Handler.CreateBook(c)
+}
+
+// LookupBookByISBN operation middleware
+func (siw *ServerInterfaceWrapper) LookupBookByISBN(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "isbn" -------------
+	var isbn string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "isbn", c.Params("isbn"), &isbn, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter isbn: %w", err).Error())
+	}
+
+	return siw.Handler.LookupBookByISBN(c, isbn)
 }
 
 // SearchBooks operation middleware
@@ -529,6 +578,8 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 
 	router.Post(options.BaseURL+"/books", wrapper.CreateBook)
 
+	router.Get(options.BaseURL+"/books/lookup/:isbn", wrapper.LookupBookByISBN)
+
 	router.Get(options.BaseURL+"/books/search", wrapper.SearchBooks)
 
 	router.Delete(options.BaseURL+"/books/:bookID", wrapper.DeleteBookByID)
@@ -608,6 +659,41 @@ type CreateBook422JSONResponse Problem
 func (response CreateBook422JSONResponse) VisitCreateBookResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(422)
+
+	return ctx.JSON(&response)
+}
+
+type LookupBookByISBNRequestObject struct {
+	Isbn string `json:"isbn"`
+}
+
+type LookupBookByISBNResponseObject interface {
+	VisitLookupBookByISBNResponse(ctx *fiber.Ctx) error
+}
+
+type LookupBookByISBN200JSONResponse BookMetadata
+
+func (response LookupBookByISBN200JSONResponse) VisitLookupBookByISBNResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type LookupBookByISBN404JSONResponse Problem
+
+func (response LookupBookByISBN404JSONResponse) VisitLookupBookByISBNResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type LookupBookByISBN500JSONResponse Problem
+
+func (response LookupBookByISBN500JSONResponse) VisitLookupBookByISBNResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
 
 	return ctx.JSON(&response)
 }
@@ -998,6 +1084,9 @@ type StrictServerInterface interface {
 	// Create a new book
 	// (POST /books)
 	CreateBook(ctx context.Context, request CreateBookRequestObject) (CreateBookResponseObject, error)
+	// Lookup book metadata by ISBN from OpenLibrary
+	// (GET /books/lookup/{isbn})
+	LookupBookByISBN(ctx context.Context, request LookupBookByISBNRequestObject) (LookupBookByISBNResponseObject, error)
 	// Search books by title or author
 	// (GET /books/search)
 	SearchBooks(ctx context.Context, request SearchBooksRequestObject) (SearchBooksResponseObject, error)
@@ -1093,6 +1182,33 @@ func (sh *strictHandler) CreateBook(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	} else if validResponse, ok := response.(CreateBookResponseObject); ok {
 		if err := validResponse.VisitCreateBookResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// LookupBookByISBN operation middleware
+func (sh *strictHandler) LookupBookByISBN(ctx *fiber.Ctx, isbn string) error {
+	var request LookupBookByISBNRequestObject
+
+	request.Isbn = isbn
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.LookupBookByISBN(ctx.UserContext(), request.(LookupBookByISBNRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "LookupBookByISBN")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(LookupBookByISBNResponseObject); ok {
+		if err := validResponse.VisitLookupBookByISBNResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {
