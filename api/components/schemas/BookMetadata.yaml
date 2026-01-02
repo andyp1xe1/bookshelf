@@ -1,0 +1,23 @@
+type: object
+required:
+  - title
+  - author
+properties:
+  title:
+    type: string
+    description: Book title from OpenLibrary
+  author:
+    type: string
+    description: Book author (first author if multiple)
+  publishedYear:
+    type: string
+    description: Year the book was published
+  genre:
+    type: string
+    description: Primary genre/subject
+  coverUrl:
+    type: string
+    description: URL to cover image from OpenLibrary
+  coverObjectKey:
+    type: string
+    description: R2 object key if cover was uploaded

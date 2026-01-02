@@ -1,0 +1,31 @@
+get:
+  summary: Lookup book metadata by ISBN from OpenLibrary
+  operationId: lookupBookByISBN
+  tags:
+    - books
+  parameters:
+    - name: isbn
+      in: path
+      required: true
+      schema:
+        type: string
+      description: ISBN to lookup (with or without dashes)
+  responses:
+    "200":
+      description: Book metadata found
+      content:
+        application/json:
+          schema:
+            $ref: "../components/schemas/BookMetadata.yaml"
+    "404":
+      description: ISBN not found in OpenLibrary
+      content:
+        application/json:
+          schema:
+            $ref: "../components/schemas/Problem.yaml"
+    "500":
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "../components/schemas/Problem.yaml"
