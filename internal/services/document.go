@@ -287,7 +287,6 @@ func (s *DocumentService) GetDocMeta(ctx context.Context, bookID, documentID int
 		return nil, fmt.Errorf("document %d does not belong to book %d", documentID, bookID)
 	}
 	return documentToAPIPtr(docRecord), nil
-	return documentToAPIPtr(docRecord), nil
 }
 
 func (s *DocumentService) DeleteByID(ctx context.Context, userID string, bookID, documentID int64) error {

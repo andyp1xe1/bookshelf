@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
-  CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
@@ -30,22 +29,8 @@ export function BookCard({ book, onOpenDetail }: BookCardProps) {
   }
 
   return (
-    <Card size="sm" className="bg-background/80 relative group">
-      {isOwner && (
-        <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Link
-            to="/books/$bookId/edit"
-            params={{ bookId: book.id.toString() }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={2} />
-              <span className="sr-only">Edit book</span>
-            </Button>
-          </Link>
-        </div>
-      )}
-      
+    <Card size="sm" className="bg-background/80">
+
       <button
         onClick={handleCardClick}
         className="w-full text-left transition-opacity hover:opacity-80"
@@ -58,7 +43,7 @@ export function BookCard({ book, onOpenDetail }: BookCardProps) {
               size="sm"
             />
             <div className="flex-1 space-y-3">
-              <div className="flex items-start justify-between gap-3 pr-8">
+              <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
                   <CardTitle>{book.title}</CardTitle>
                   <CardDescription>{book.author}</CardDescription>
@@ -73,14 +58,24 @@ export function BookCard({ book, onOpenDetail }: BookCardProps) {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="text-muted-foreground text-xs uppercase tracking-wide">
-            ISBN
-          </div>
-          <div className="text-sm font-medium">{book.isbn}</div>
-        </CardContent>
-        <CardFooter className="text-muted-foreground text-xs">
-          Catalog ID #{book.id}
+        <CardFooter className="flex items-center justify-between">
+          <p className="text-muted-foreground text-sm">
+            ISBN: {book.isbn}
+          </p>
+          {isOwner && (
+            <div className="">
+              <Link
+                to="/books/$bookId/edit"
+                params={{ bookId: book.id.toString() }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={2} />
+                  <span className="sr-only">Edit book</span>
+                </Button>
+              </Link>
+            </div>
+          )}
         </CardFooter>
       </button>
     </Card>

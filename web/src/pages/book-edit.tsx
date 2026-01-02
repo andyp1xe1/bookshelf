@@ -11,9 +11,11 @@ import {
   updateBookMutation,
   deleteBookByIdMutation,
 } from "@/client/@tanstack/react-query.gen"
-import type { BookUpdate } from "@/client/types.gen"
+import { lookupBookByIsbn } from "@/client/sdk.gen"
+import type { BookUpdate, BookMetadata } from "@/client/types.gen"
 import { DocumentList } from "@/components/documents/document-list"
 import { DocumentUploadForm } from "@/components/documents/document-upload-form"
+import { CoverImage } from "@/components/books/cover-image"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -60,6 +62,9 @@ export function BookEditPage() {
     genre: undefined,
   })
 
+  const [coverPreviewUrl, setCoverPreviewUrl] = React.useState<string | null>(null)
+  const [isLookingUp, setIsLookingUp] = React.useState(false)
+
   React.useEffect(() => {
     if (bookData) {
       setFormData({
@@ -69,6 +74,10 @@ export function BookEditPage() {
         publishedYear: bookData.publishedYear,
         genre: bookData.genre || undefined,
       })
+      // Set cover preview if available
+      if (bookData.coverUrl) {
+        setCoverPreviewUrl(bookData.coverUrl)
+      }
     }
   }, [bookData])
 
@@ -87,6 +96,42 @@ export function BookEditPage() {
       navigate({ to: "/" })
     },
   })
+
+  const handleAutofill = async () => {
+    if (!formData.isbn) {
+      toast.error("Please enter an ISBN first")
+      return
+    }
+
+    setIsLookingUp(true)
+    try {
+      const result = await lookupBookByIsbn({
+        path: { isbn: formData.isbn }
+      })
+
+      const metadata = result.data as BookMetadata
+      
+      // Autofill form fields
+      setFormData({
+        ...formData,
+        title: metadata.title || formData.title,
+        author: metadata.author || formData.author,
+        publishedYear: metadata.publishedYear || formData.publishedYear,
+        genre: metadata.genre || formData.genre,
+      })
+
+      // Set cover preview if available
+      if (metadata.coverUrl) {
+        setCoverPreviewUrl(metadata.coverUrl)
+      }
+      
+      toast.success("Book information retrieved successfully")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to lookup ISBN")
+    } finally {
+      setIsLookingUp(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -247,15 +292,26 @@ export function BookEditPage() {
 
                     <Field>
                       <FieldLabel htmlFor="isbn">ISBN *</FieldLabel>
-                      <Input
-                        id="isbn"
-                        value={formData.isbn}
-                        onChange={(e) =>
-                          setFormData({ ...formData, isbn: e.target.value })
-                        }
-                        required
-                        disabled={isPending}
-                      />
+                      <div className="flex gap-2">
+                        <Input
+                          id="isbn"
+                          value={formData.isbn}
+                          onChange={(e) =>
+                            setFormData({ ...formData, isbn: e.target.value })
+                          }
+                          required
+                          disabled={isPending}
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleAutofill}
+                          disabled={isPending || isLookingUp || !formData.isbn}
+                        >
+                          {isLookingUp ? "..." : "Autofill"}
+                        </Button>
+                      </div>
                     </Field>
                   </div>
 
@@ -344,6 +400,24 @@ export function BookEditPage() {
               </form>
             </CardContent>
           </Card>
+
+          {coverPreviewUrl && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Cover Preview</CardTitle>
+                <CardDescription>
+                  Current book cover
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex justify-center">
+                <CoverImage 
+                  src={coverPreviewUrl}
+                  alt={formData.title || "Book cover"}
+                  size="lg"
+                />
+              </CardContent>
+            </Card>
+          )}
 
           <Separator />
 

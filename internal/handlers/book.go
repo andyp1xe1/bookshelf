@@ -18,8 +18,6 @@ type BookService interface {
 	List(ctx context.Context, limit, offset int32) (api.BookList, error)
 	Search(ctx context.Context, query string, limit, offset int32) (api.BookList, error)
 	LookupISBN(ctx context.Context, isbn string, uploadCover bool) (api.BookMetadata, error)
-	EnrichBookWithCoverURL(ctx context.Context, book api.Book) api.Book
-	EnrichBooksWithCoverURLs(ctx context.Context, books []api.Book) []api.Book
 }
 
 type BookHandler struct {
@@ -36,8 +34,6 @@ func (h *BookHandler) ListBooks(ctx context.Context, in api.ListBooksRequestObje
 	if err != nil {
 		return nil, err
 	}
-	// Enrich with presigned cover URLs
-	books.Items = h.service.EnrichBooksWithCoverURLs(ctx, books.Items)
 	return api.ListBooks200JSONResponse(books), nil
 }
 
@@ -54,8 +50,6 @@ func (h *BookHandler) CreateBook(ctx context.Context, in api.CreateBookRequestOb
 			Detail: &detail,
 		}, nil
 	}
-	// Enrich with presigned cover URL
-	book = h.service.EnrichBookWithCoverURL(ctx, book)
 	return api.CreateBook201JSONResponse(book), nil
 }
 
@@ -65,8 +59,6 @@ func (h *BookHandler) SearchBooks(ctx context.Context, in api.SearchBooksRequest
 	if err != nil {
 		return nil, err
 	}
-	// Enrich with presigned cover URLs
-	books.Items = h.service.EnrichBooksWithCoverURLs(ctx, books.Items)
 	return api.SearchBooks200JSONResponse(books), nil
 }
 
@@ -82,8 +74,6 @@ func (h *BookHandler) GetBookByID(ctx context.Context, in api.GetBookByIDRequest
 			Detail: &detail,
 		}, nil
 	}
-	// Enrich with presigned cover URL
-	book = h.service.EnrichBookWithCoverURL(ctx, book)
 	return api.GetBookByID200JSONResponse(book), nil
 }
 
@@ -110,8 +100,6 @@ func (h *BookHandler) UpdateBook(ctx context.Context, in api.UpdateBookRequestOb
 			Detail: &detail,
 		}, nil
 	}
-	// Enrich with presigned cover URL
-	book = h.service.EnrichBookWithCoverURL(ctx, book)
 	return api.UpdateBook200JSONResponse(book), nil
 }
 

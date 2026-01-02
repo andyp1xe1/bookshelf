@@ -8,6 +8,7 @@ import {
 import { Link } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import * as React from "react"
+import { useDebounce } from "use-debounce"
 
 import {
   listBooksOptions,
@@ -15,6 +16,7 @@ import {
 } from "@/client/@tanstack/react-query.gen"
 import type { Book } from "@/client/types.gen"
 import { BookCard } from "@/components/books/book-card"
+import { BookCardSkeleton } from "@/components/books/book-card-skeleton"
 import { BookDetailDialog } from "@/components/books/book-detail-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -71,11 +73,13 @@ const sortBooks = (books: Book[], sortKey: SortKey) => {
 
 export function HomePage() {
   const [searchTerm, setSearchTerm] = React.useState("")
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 500)
   const [sortKey, setSortKey] = React.useState<SortKey>("title")
   const [selectedBook, setSelectedBook] = React.useState<Book | null>(null)
 
-  const normalizedSearch = searchTerm.trim()
+  const normalizedSearch = debouncedSearchTerm.trim()
   const isSearching = normalizedSearch.length > 0
+  const isDebouncing = searchTerm.trim() !== debouncedSearchTerm.trim()
 
   const listQuery = useQuery(
     listBooksOptions({ query: { limit: 12, offset: 0 } })
@@ -94,7 +98,11 @@ export function HomePage() {
     [activeItems, sortKey]
   )
   const total = activeQuery.data?.total ?? 0
-  const statusLabel = activeQuery.isFetching ? "Syncing" : "Up to date"
+  const statusLabel = isDebouncing
+    ? "Typing..."
+    : activeQuery.isFetching
+      ? "Syncing"
+      : "Up to date"
   const errorMessage =
     activeQuery.error instanceof Error
       ? activeQuery.error.message
@@ -131,7 +139,7 @@ export function HomePage() {
               Bookshelf
             </h1>
             <p className="text-muted-foreground text-sm">
-              Explore our books and contribuite!
+              Browse and contribuite to this shared library
             </p>
           </div>
           <Card size="sm" className="w-full md:w-72">
@@ -227,19 +235,29 @@ export function HomePage() {
               : "Showing latest titles"}
           </div>
           <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-primary" />
-            {activeQuery.isFetching ? "Updating from API" : "Synced"}
+            <span
+              className={`h-2 w-2 rounded-full ${
+                isDebouncing || activeQuery.isFetching
+                  ? "bg-yellow-500 animate-pulse"
+                  : "bg-primary"
+              }`}
+            />
+            {isDebouncing
+              ? "Waiting for input..."
+              : activeQuery.isFetching
+                ? "Updating from API"
+                : "Synced"}
           </div>
         </div>
 
         <Separator />
 
         {activeQuery.isLoading ? (
-          <Card>
-            <CardContent className="py-10 text-center text-sm text-muted-foreground">
-              Loading catalog...
-            </CardContent>
-          </Card>
+          <div className="grid gap-4 md:grid-cols-2">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <BookCardSkeleton key={index} />
+            ))}
+          </div>
         ) : activeQuery.isError ? (
           <Card>
             <CardContent className="py-10 text-center text-sm text-destructive">

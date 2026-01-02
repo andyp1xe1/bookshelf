@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/andyp1xe1/bookshelf/internal/api"
@@ -25,13 +26,6 @@ type BookStore interface {
 	SearchBooks(ctx context.Context, arg store.SearchBooksParams) ([]store.Book, error)
 }
 
-// Create(ctx context.Context, userID string, in api.BookCreate) (api.Book, error)
-// Get(ctx context.Context, id int64) (api.Book, bool, error)
-// Update(ctx context.Context, userID string, id int64, in api.BookUpdate) (api.Book, bool, error)
-// Delete(ctx context.Context, userID string, id int64) (bool, error)
-// List(ctx context.Context, limit, offset int32) (api.BookList, error)
-// Search(ctx context.Context, query string, limit, offset int32) (api.BookList, error)
-
 type BookService struct {
 	books BookStore
 }
@@ -48,6 +42,8 @@ func (s *BookService) Create(ctx context.Context, userID string, in api.BookCrea
 		return api.Book{}, err
 	}
 
+	coverObjectKey := s.getCoverObjectKeyForISBN(ctx, in.Isbn)
+
 	record, err := s.books.CreateBook(ctx, store.CreateBookParams{
 		UserID:         userID,
 		Title:          in.Title,
@@ -55,13 +51,13 @@ func (s *BookService) Create(ctx context.Context, userID string, in api.BookCrea
 		PublishedYear:  year,
 		Isbn:           in.Isbn,
 		Genre:          in.Genre,
-		CoverObjectKey: nil, // Will be set via autofill or manual upload
+		CoverObjectKey: coverObjectKey,
 	})
 	if err != nil {
 		return api.Book{}, err
 	}
 
-	return recordToAPI(record), nil
+	return s.recordToAPI(ctx, record), nil
 }
 
 func (s *BookService) Get(ctx context.Context, id int64) (api.Book, bool, error) {
@@ -72,7 +68,7 @@ func (s *BookService) Get(ctx context.Context, id int64) (api.Book, bool, error)
 		}
 		return api.Book{}, false, err
 	}
-	return recordToAPI(record), true, nil
+	return s.recordToAPI(ctx, record), true, nil
 }
 
 func (s *BookService) Update(ctx context.Context, userID string, id int64, in api.BookUpdate) (api.Book, bool, error) {
@@ -92,6 +88,9 @@ func (s *BookService) Update(ctx context.Context, userID string, id int64, in ap
 		return api.Book{}, true, err
 	}
 
+	// Deduce cover object key from ISBN (check if cover exists in R2)
+	coverObjectKey := s.getCoverObjectKeyForISBN(ctx, in.Isbn)
+
 	record, err := s.books.UpdateBook(ctx, store.UpdateBookParams{
 		ID:             id,
 		UserID:         userID,
@@ -100,7 +99,7 @@ func (s *BookService) Update(ctx context.Context, userID string, id int64, in ap
 		PublishedYear:  year,
 		Isbn:           in.Isbn,
 		Genre:          in.Genre,
-		CoverObjectKey: nil, // Keep existing cover for now
+		CoverObjectKey: coverObjectKey, // Deduced from ISBN, never from client
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -109,7 +108,7 @@ func (s *BookService) Update(ctx context.Context, userID string, id int64, in ap
 		return api.Book{}, true, err
 	}
 
-	return recordToAPI(record), true, nil
+	return s.recordToAPI(ctx, record), true, nil
 }
 
 func (s *BookService) Delete(ctx context.Context, userID string, id int64) (bool, error) {
@@ -146,7 +145,7 @@ func (s *BookService) List(ctx context.Context, limit, offset int32) (api.BookLi
 		return api.BookList{}, err
 	}
 
-	return recordsToBookList(records), nil
+	return s.recordsToBookList(ctx, records), nil
 }
 
 func (s *BookService) Search(ctx context.Context, query string, limit, offset int32) (api.BookList, error) {
@@ -160,7 +159,7 @@ func (s *BookService) Search(ctx context.Context, query string, limit, offset in
 		return api.BookList{}, err
 	}
 
-	return recordsToBookList(records), nil
+	return s.recordsToBookList(ctx, records), nil
 }
 
 func parsePublishedYear(value string) (int32, error) {
@@ -171,7 +170,8 @@ func parsePublishedYear(value string) (int32, error) {
 	return int32(parsed), nil
 }
 
-func recordToAPI(record store.Book) api.Book {
+func (s *BookService) recordToAPI(ctx context.Context, record store.Book) api.Book {
+	url := s.makeCoverURL(ctx, record)
 	return api.Book{
 		Id:             record.ID,
 		UserId:         record.UserID,
@@ -181,14 +181,14 @@ func recordToAPI(record store.Book) api.Book {
 		Isbn:           record.Isbn,
 		Genre:          record.Genre,
 		CoverObjectKey: record.CoverObjectKey,
-		CoverUrl:       nil, // Will be populated by handler when needed
+		CoverUrl:       url,
 	}
 }
 
-func recordsToBookList(records []store.Book) api.BookList {
+func (s *BookService) recordsToBookList(ctx context.Context, records []store.Book) api.BookList {
 	items := make([]api.Book, 0, len(records))
 	for _, record := range records {
-		items = append(items, recordToAPI(record))
+		items = append(items, s.recordToAPI(ctx, record))
 	}
 
 	return api.BookList{
@@ -254,8 +254,36 @@ func (s *BookService) uploadCoverToR2(ctx context.Context, isbn string, data []b
 	return objectKey, nil
 }
 
+// getCoverObjectKeyForISBN checks if a cover exists for the given ISBN and returns the object key
+func (s *BookService) getCoverObjectKeyForISBN(ctx context.Context, isbn string) *string {
+	// Clean ISBN (remove dashes/spaces)
+	cleanISBN := strings.ReplaceAll(strings.ReplaceAll(isbn, "-", ""), " ", "")
+	objectKey := fmt.Sprintf("covers/%s.jpg", cleanISBN)
+
+	// Check if object exists in R2
+	s3c, err := newS3Client()
+	if err != nil {
+		return nil
+	}
+
+	bucketName := os.Getenv("CLOUDFLARE_R2_BUCKET_NAME")
+
+	// Try to head the object to see if it exists
+	_, err = s3c.HeadObject(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(objectKey),
+	})
+
+	if err != nil {
+		// Object doesn't exist or error occurred
+		return nil
+	}
+
+	return &objectKey
+}
+
 // GenerateCoverPresignedURL generates a presigned URL for a cover image in R2
-func (s *BookService) GenerateCoverPresignedURL(ctx context.Context, coverObjectKey string) (string, error) {
+func (s *BookService) generateCoverPresignedURL(ctx context.Context, coverObjectKey string) (string, error) {
 	if coverObjectKey == "" {
 		return "", nil
 	}
@@ -282,21 +310,11 @@ func (s *BookService) GenerateCoverPresignedURL(ctx context.Context, coverObject
 	return presignResult.URL, nil
 }
 
-// EnrichBookWithCoverURL adds presigned cover URL to a book
-func (s *BookService) EnrichBookWithCoverURL(ctx context.Context, book api.Book) api.Book {
+func (s *BookService) makeCoverURL(ctx context.Context, book store.Book) *string {
 	if book.CoverObjectKey != nil && *book.CoverObjectKey != "" {
-		if coverURL, err := s.GenerateCoverPresignedURL(ctx, *book.CoverObjectKey); err == nil && coverURL != "" {
-			book.CoverUrl = &coverURL
+		if coverURL, err := s.generateCoverPresignedURL(ctx, *book.CoverObjectKey); err == nil && coverURL != "" {
+			return &coverURL
 		}
 	}
-	return book
-}
-
-// EnrichBooksWithCoverURLs adds presigned cover URLs to a list of books
-func (s *BookService) EnrichBooksWithCoverURLs(ctx context.Context, books []api.Book) []api.Book {
-	enriched := make([]api.Book, len(books))
-	for i, book := range books {
-		enriched[i] = s.EnrichBookWithCoverURL(ctx, book)
-	}
-	return enriched
+	return nil
 }

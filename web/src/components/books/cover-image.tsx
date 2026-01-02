@@ -8,10 +8,10 @@ interface CoverImageProps {
 }
 
 const sizeConfig = {
-  sm: { width: 80, height: 120 },
-  md: { width: 150, height: 225 },
-  lg: { width: 200, height: 300 },
-  xl: { width: 300, height: 450 },
+  sm: { width: 80, height: 120, iconSize: 32 },
+  md: { width: 150, height: 225, iconSize: 48 },
+  lg: { width: 200, height: 300, iconSize: 64 },
+  xl: { width: 300, height: 450, iconSize: 96 },
 };
 
 export function CoverImage({
@@ -20,14 +20,21 @@ export function CoverImage({
   size = "md",
   className,
 }: CoverImageProps) {
-  const { width, height } = sizeConfig[size];
+  const { width, height, iconSize } = sizeConfig[size];
 
   if (!src) {
     return (
       <div
-        className={cn("bg-muted", className)}
+        className={cn("bg-muted flex items-center justify-center", className)}
         style={{ width, height }}
-      />
+      >
+        <img
+          src="/favicon.png"
+          alt="Book placeholder"
+          style={{ width: iconSize, height: iconSize }}
+          className="opacity-70"
+        />
+      </div>
     );
   }
 
@@ -42,9 +49,18 @@ export function CoverImage({
         const target = e.currentTarget;
         target.style.display = "none";
         const placeholder = document.createElement("div");
-        placeholder.className = "bg-muted";
+        placeholder.className = "bg-muted flex items-center justify-center";
         placeholder.style.width = `${width}px`;
         placeholder.style.height = `${height}px`;
+
+        const icon = document.createElement("img");
+        icon.src = "/favicon.png";
+        icon.alt = "Book placeholder";
+        icon.style.width = `${iconSize}px`;
+        icon.style.height = `${iconSize}px`;
+        icon.className = "opacity-30";
+
+        placeholder.appendChild(icon);
         target.parentNode?.insertBefore(placeholder, target);
       }}
     />
