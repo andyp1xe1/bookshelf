@@ -79,9 +79,8 @@ func main() {
 	// Self-ping to keep the service warm.
 	go func() {
 		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+		log.Printf("starting self-ping to %s", selfPingURL)
 		for {
-			wait := time.Duration(5+rng.Intn(6)) * time.Minute
-			time.Sleep(wait)
 			resp, err := http.Get(selfPingURL)
 			if err != nil {
 				log.Printf("self-ping failed: %v", err)
@@ -96,6 +95,10 @@ func main() {
 			if resp.StatusCode != http.StatusOK {
 				log.Printf("self-ping status: %s", resp.Status)
 			}
+
+			wait := time.Duration(1+rng.Intn(4)) * time.Minute
+			log.Printf(("rng self-ping waiting for %s"), wait)
+			time.Sleep(wait)
 		}
 	}()
 
