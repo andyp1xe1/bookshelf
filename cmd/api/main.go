@@ -52,7 +52,7 @@ func main() {
 
 	app := fiber.New()
 	app.Use(cors.New())
-	app.Get("/health", func(c *fiber.Ctx) error {
+	app.Get("/healthz", func(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusOK)
 	})
 	store := store.New(pool)
@@ -75,8 +75,14 @@ func main() {
 		port = "8080"
 	}
 
-	selfPingURL := "http://0.0.0.0:" + port + "/health"
-	// Self-ping to keep the service warm.
+	selfPingURL := os.Getenv("SELF_PING_URL")
+	if selfPingURL == "" {
+		selfPingURL = "http://localhost:" + port + "/healthz"
+	}
+	selfPingInterval := os.Getenv("SELF_PING_INTERVAL")
+	if selfPingInterval == "" {
+		selfPingInterval = "13m"
+	}
 	go func() {
 		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 		log.Printf("starting self-ping to %s", selfPingURL)
@@ -96,9 +102,13 @@ func main() {
 				log.Printf("self-ping status: %s", resp.Status)
 			}
 
-			wait := time.Duration(1+rng.Intn(4)) * time.Minute
-			log.Printf(("rng self-ping waiting for %s"), wait)
-			time.Sleep(wait)
+			waitDuration, err := time.ParseDuration(selfPingInterval)
+			if err != nil {
+				log.Printf("invalid SELF_PING_INTERVAL, defaulting to 13m: %v", err)
+				waitDuration = 13 * time.Minute
+			}
+			jitter := time.Duration(rng.Intn(60)) * time.Second
+			time.Sleep(waitDuration + jitter)
 		}
 	}()
 
