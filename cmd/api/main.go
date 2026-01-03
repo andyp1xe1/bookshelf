@@ -83,6 +83,11 @@ func main() {
 	if selfPingInterval == "" {
 		selfPingInterval = "13m"
 	}
+	waitDuration, err := time.ParseDuration(selfPingInterval)
+	if err != nil {
+		log.Printf("invalid SELF_PING_INTERVAL, defaulting to 13m: %v", err)
+		waitDuration = 13 * time.Minute
+	}
 	go func() {
 		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 		log.Printf("starting self-ping to %s", selfPingURL)
@@ -102,11 +107,6 @@ func main() {
 				log.Printf("self-ping status: %s", resp.Status)
 			}
 
-			waitDuration, err := time.ParseDuration(selfPingInterval)
-			if err != nil {
-				log.Printf("invalid SELF_PING_INTERVAL, defaulting to 13m: %v", err)
-				waitDuration = 13 * time.Minute
-			}
 			jitter := time.Duration(rng.Intn(60)) * time.Second
 			time.Sleep(waitDuration + jitter)
 		}
