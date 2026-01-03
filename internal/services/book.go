@@ -42,14 +42,16 @@ func (s *BookService) Create(ctx context.Context, userID string, in api.BookCrea
 		return api.Book{}, err
 	}
 
-	coverObjectKey := s.getCoverObjectKeyForISBN(ctx, in.Isbn)
+	// Clean ISBN before storing
+	cleanedISBN := cleanISBN(in.Isbn)
+	coverObjectKey := s.getCoverObjectKeyForISBN(ctx, cleanedISBN)
 
 	record, err := s.books.CreateBook(ctx, store.CreateBookParams{
 		UserID:         userID,
 		Title:          in.Title,
 		Author:         in.Author,
 		PublishedYear:  year,
-		Isbn:           in.Isbn,
+		Isbn:           cleanedISBN,
 		Genre:          in.Genre,
 		CoverObjectKey: coverObjectKey,
 	})
@@ -88,8 +90,9 @@ func (s *BookService) Update(ctx context.Context, userID string, id int64, in ap
 		return api.Book{}, true, err
 	}
 
-	// Deduce cover object key from ISBN (check if cover exists in R2)
-	coverObjectKey := s.getCoverObjectKeyForISBN(ctx, in.Isbn)
+	// Clean ISBN before storing and checking for cover
+	cleanedISBN := cleanISBN(in.Isbn)
+	coverObjectKey := s.getCoverObjectKeyForISBN(ctx, cleanedISBN)
 
 	record, err := s.books.UpdateBook(ctx, store.UpdateBookParams{
 		ID:             id,
@@ -97,7 +100,7 @@ func (s *BookService) Update(ctx context.Context, userID string, id int64, in ap
 		Title:          in.Title,
 		Author:         in.Author,
 		PublishedYear:  year,
-		Isbn:           in.Isbn,
+		Isbn:           cleanedISBN,
 		Genre:          in.Genre,
 		CoverObjectKey: coverObjectKey, // Deduced from ISBN, never from client
 	})
@@ -170,6 +173,11 @@ func parsePublishedYear(value string) (int32, error) {
 	return int32(parsed), nil
 }
 
+// cleanISBN removes dashes and spaces from ISBN
+func cleanISBN(isbn string) string {
+	return strings.ReplaceAll(strings.ReplaceAll(isbn, "-", ""), " ", "")
+}
+
 func (s *BookService) recordToAPI(ctx context.Context, record store.Book) api.Book {
 	url := s.makeCoverURL(ctx, record)
 	return api.Book{
@@ -238,8 +246,10 @@ func (s *BookService) uploadCoverToR2(ctx context.Context, isbn string, data []b
 		return "", fmt.Errorf("failed to create S3 client: %w", err)
 	}
 
+	// Clean ISBN before using it
+	cleanedISBN := cleanISBN(isbn)
 	bucketName := os.Getenv("CLOUDFLARE_R2_BUCKET_NAME")
-	objectKey := fmt.Sprintf("covers/%s.jpg", isbn)
+	objectKey := fmt.Sprintf("covers/%s.jpg", cleanedISBN)
 
 	_, err = s3c.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(bucketName),
@@ -255,10 +265,9 @@ func (s *BookService) uploadCoverToR2(ctx context.Context, isbn string, data []b
 }
 
 // getCoverObjectKeyForISBN checks if a cover exists for the given ISBN and returns the object key
+// Note: isbn parameter should already be cleaned (no dashes/spaces)
 func (s *BookService) getCoverObjectKeyForISBN(ctx context.Context, isbn string) *string {
-	// Clean ISBN (remove dashes/spaces)
-	cleanISBN := strings.ReplaceAll(strings.ReplaceAll(isbn, "-", ""), " ", "")
-	objectKey := fmt.Sprintf("covers/%s.jpg", cleanISBN)
+	objectKey := fmt.Sprintf("covers/%s.jpg", isbn)
 
 	// Check if object exists in R2
 	s3c, err := newS3Client()
