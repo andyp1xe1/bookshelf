@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"io"
 
 	"log"
 	"math/rand"
@@ -74,7 +75,7 @@ func main() {
 		port = "8080"
 	}
 
-	selfPingURL := "http://127.0.0.1:" + port + "/health"
+	selfPingURL := "http://0.0.0.0:" + port + "/health"
 	// Self-ping to keep the service warm.
 	go func() {
 		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -85,6 +86,11 @@ func main() {
 			if err != nil {
 				log.Printf("self-ping failed: %v", err)
 				continue
+			}
+			if res, err := io.ReadAll(resp.Body); err != nil {
+				log.Printf("self-ping read body failed: %v", err)
+			} else {
+				log.Printf("self-ping response body: %s", string(res))
 			}
 			resp.Body.Close()
 			if resp.StatusCode != http.StatusOK {

@@ -101,7 +101,7 @@ export function HomePage() {
   const statusLabel = isDebouncing
     ? "Typing..."
     : activeQuery.isFetching
-      ? "Syncing"
+      ? "Loading..."
       : "Up to date"
   const errorMessage =
     activeQuery.error instanceof Error
@@ -145,7 +145,7 @@ export function HomePage() {
           <Card size="sm" className="w-full md:w-72">
             <CardHeader>
               <CardTitle>Catalog Status</CardTitle>
-              <CardDescription>Live reads from the books API.</CardDescription>
+              <CardDescription>Current total of titles</CardDescription>
               <CardAction>
                 <Badge variant="secondary">{statusLabel}</Badge>
               </CardAction>
@@ -232,21 +232,22 @@ export function HomePage() {
           <div>
             {isSearching
               ? `Searching for "${normalizedSearch}"`
-              : "Showing latest titles"}
+              : activeQuery.isFetching
+                ? "Loading books..."
+                : `Showing ${books.length} of ${total} books`}
           </div>
           <div className="flex items-center gap-2">
             <span
-              className={`h-2 w-2 rounded-full ${
-                isDebouncing || activeQuery.isFetching
-                  ? "bg-yellow-500 animate-pulse"
-                  : "bg-primary"
-              }`}
+              className={`h-2 w-2 rounded-full ${isDebouncing || activeQuery.isFetching
+                ? "bg-yellow-500 animate-pulse"
+                : "bg-primary"
+                }`}
             />
             {isDebouncing
               ? "Waiting for input..."
               : activeQuery.isFetching
-                ? "Updating from API"
-                : "Synced"}
+                ? "Loading..."
+                : "All caught up!"}
           </div>
         </div>
 
