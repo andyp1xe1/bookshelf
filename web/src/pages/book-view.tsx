@@ -134,12 +134,12 @@ export function BookViewPage() {
             {/* Header */}
             <div className="space-y-2">
               <div className="flex items-start justify-between gap-4">
-                <h1 className="text-4xl font-bold">{book.title}</h1>
+                <h1 className="text-xl font-bold text-foreground">{book.title}</h1>
                 <Badge variant="secondary" className="text-base px-3 py-1">
                   {book.publishedYear}
                 </Badge>
               </div>
-              <p className="text-xl text-muted-foreground">by {book.author}</p>
+              <p className="text-l text-muted-foreground">by {book.author}</p>
             </div>
 
             {/* Details Grid */}
@@ -148,14 +148,14 @@ export function BookViewPage() {
                 <div className="text-muted-foreground text-xs uppercase tracking-wide mb-1">
                   ISBN
                 </div>
-                <div className="text-base font-medium">{book.isbn}</div>
+                <div className="text-s font-medium">{book.isbn}</div>
               </div>
               {book.genre && (
                 <div>
                   <div className="text-muted-foreground text-xs uppercase tracking-wide mb-1">
                     Genre
                   </div>
-                  <div className="text-base font-medium">{book.genre}</div>
+                  <div className="text-s font-medium">{book.genre}</div>
                 </div>
               )}
             </div>

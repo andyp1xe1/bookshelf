@@ -2,3 +2,7 @@
 tmp/
 tmp/**/*
 TODO.md
+
+# Status and config files
+upload-doc-status-*.md
+r2-cors-config.json
