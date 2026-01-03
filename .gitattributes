@@ -1,0 +1,15 @@
+# Mark generated files as linguist-generated
+# This excludes them from language stats
+
+# OpenAPI generated Go code
+internal/api/api.gen.go linguist-generated
+
+# OpenAPI generated TypeScript client
+web/src/client/** linguist-generated
+
+# SQLC generated code
+internal/store/queries.sql.go linguist-generated
+internal/store/models.go linguist-generated
+
+# OpenAPI bundle
+api/_bundle.yaml linguist-generated
