@@ -38,7 +38,27 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
+    <ClerkProvider 
+      publishableKey={PUBLISHABLE_KEY} 
+      afterSignOutUrl="/"
+      appearance={{
+        baseTheme: undefined,
+        variables: {
+          colorBackground: 'oklch(0.205 0 0)',
+          colorInputBackground: 'oklch(1 0 0 / 15%)',
+          colorInputText: 'oklch(0.985 0 0)',
+          colorText: 'oklch(0.985 0 0)',
+          colorTextSecondary: 'oklch(0.708 0 0)',
+          colorPrimary: 'oklch(0.77 0.20 131)',
+          colorDanger: 'oklch(0.704 0.191 22.216)',
+          colorSuccess: 'oklch(0.77 0.20 131)',
+          colorWarning: 'oklch(0.85 0.21 129)',
+          colorNeutral: 'oklch(0.985 0 0)',
+          borderRadius: '0',
+          fontFamily: 'JetBrains Mono Variable, monospace',
+        },
+      }}
+    >
       <QueryClientProvider client={queryClient}>
         <ClientConf />
         <RouterProvider router={router} />

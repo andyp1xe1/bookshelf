@@ -139,7 +139,7 @@
   [data-sonner-toast][data-type="success"] {
     background-color: oklch(0.269 0 0) !important;
     color: oklch(0.985 0 0) !important;
-    border: 1px solid oklch(0.77 0.20 131) !important; /* green border */
+    border: 1px solid oklch(1 0 0 / 10%) !important; /* light gray border */
   }
   
   [data-sonner-toast][data-type="success"] [data-icon] {
@@ -166,5 +166,116 @@
     background-color: oklch(0.269 0 0) !important;
     color: oklch(0.985 0 0) !important;
     border: 1px solid oklch(1 0 0 / 10%) !important;
+  }
+  
+  /* Clerk UI theming - force our design system */
+  .cl-internal-b3fm6y,
+  .cl-rootBox,
+  .cl-card,
+  .cl-headerTitle,
+  .cl-headerSubtitle,
+  .cl-socialButtonsBlockButtonText,
+  .cl-formFieldLabel,
+  .cl-footerActionText,
+  .cl-formFieldLabelRow,
+  .cl-identityPreviewText,
+  .cl-userButtonPopoverActionButton,
+  .cl-userButtonPopoverActionButtonText,
+  .cl-menuItem,
+  .cl-menuList {
+    font-family: 'JetBrains Mono Variable', monospace !important;
+  }
+  
+  /* Remove all border radius */
+  .cl-card,
+  .cl-socialButtonsBlockButton,
+  .cl-formButtonPrimary,
+  .cl-footerActionLink,
+  .cl-formFieldInput,
+  .cl-userButtonPopoverCard,
+  .cl-userButtonTrigger,
+  .cl-avatarBox,
+  .cl-userPreviewTextContainer,
+  .cl-modalContent,
+  .cl-modalBackdrop {
+    border-radius: 0 !important;
+  }
+  
+  /* Dark theme colors for cards and modals */
+  .cl-modalContent,
+  .cl-card,
+  .cl-userButtonPopoverCard {
+    background-color: oklch(0.205 0 0) !important;
+    border: 1px solid oklch(1 0 0 / 10%) !important;
+  }
+  
+  /* Text colors */
+  .cl-headerTitle,
+  .cl-headerSubtitle,
+  .cl-formFieldLabel,
+  .cl-identityPreviewText,
+  .cl-userButtonPopoverActionButtonText {
+    color: oklch(0.985 0 0) !important;
+  }
+  
+  /* Primary buttons - green */
+  .cl-formButtonPrimary {
+    background-color: oklch(0.77 0.20 131) !important;
+    color: oklch(0.27 0.07 132) !important;
+  }
+  
+  .cl-formButtonPrimary:hover {
+    background-color: oklch(0.85 0.21 129) !important;
+  }
+  
+  /* Input fields */
+  .cl-formFieldInput,
+  .cl-formFieldInput[type="text"],
+  .cl-formFieldInput[type="email"],
+  .cl-formFieldInput[type="password"] {
+    background-color: oklch(1 0 0 / 15%) !important;
+    border: 1px solid oklch(1 0 0 / 10%) !important;
+    color: oklch(0.985 0 0) !important;
+    border-radius: 0 !important;
+  }
+  
+  .cl-formFieldInput:focus {
+    border-color: oklch(0.77 0.20 131) !important;
+    box-shadow: 0 0 0 1px oklch(0.77 0.20 131) !important;
+  }
+  
+  /* Social buttons */
+  .cl-socialButtonsBlockButton {
+    background-color: oklch(1 0 0 / 15%) !important;
+    border: 1px solid oklch(1 0 0 / 10%) !important;
+    color: oklch(0.985 0 0) !important;
+  }
+  
+  .cl-socialButtonsBlockButton:hover {
+    background-color: oklch(1 0 0 / 20%) !important;
+  }
+  
+  /* Links */
+  .cl-footerActionLink {
+    color: oklch(0.77 0.20 131) !important;
+  }
+  
+  .cl-footerActionLink:hover {
+    color: oklch(0.85 0.21 129) !important;
+  }
+  
+  /* User button menu items */
+  .cl-userButtonPopoverActionButton {
+    background-color: transparent !important;
+    border-radius: 0 !important;
+  }
+  
+  .cl-userButtonPopoverActionButton:hover {
+    background-color: oklch(1 0 0 / 10%) !important;
+  }
+  
+  /* Dividers */
+  .cl-dividerLine {
+    background-color: oklch(1 0 0 / 10%) !important;
   }
 }

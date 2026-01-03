@@ -1,21 +1,20 @@
-import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/clerk-react"
+import { SignedIn, SignedOut, useUser } from "@clerk/clerk-react"
 import { Link, useNavigate, useParams } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as React from "react"
 import { toast } from "sonner"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowLeft01Icon } from "@hugeicons/core-free-icons"
 
 import {
   getBookByIdOptions,
   updateBookMutation,
   deleteBookByIdMutation,
+  lookupBookByIsbnOptions,
 } from "@/client/@tanstack/react-query.gen"
-import { lookupBookByIsbn } from "@/client/sdk.gen"
 import type { BookUpdate, BookMetadata } from "@/client/types.gen"
 import { DocumentList } from "@/components/documents/document-list"
 import { DocumentUploadForm } from "@/components/documents/document-upload-form"
 import { CoverImage } from "@/components/books/cover-image"
+import { AppLayout } from "@/components/layout/app-layout"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -63,7 +62,15 @@ export function BookEditPage() {
   })
 
   const [coverPreviewUrl, setCoverPreviewUrl] = React.useState<string | null>(null)
-  const [isLookingUp, setIsLookingUp] = React.useState(false)
+  const [isbnToLookup, setIsbnToLookup] = React.useState<string | null>(null)
+
+  // Query for ISBN lookup - only runs when isbnToLookup is set
+  const { data: isbnMetadata, isLoading: isLookingUp, isError: isbnLookupFailed } = useQuery({
+    ...lookupBookByIsbnOptions({
+      path: { isbn: isbnToLookup! }
+    }),
+    enabled: !!isbnToLookup, // Only run when we have an ISBN to lookup
+  })
 
   React.useEffect(() => {
     if (bookData) {
@@ -81,6 +88,36 @@ export function BookEditPage() {
     }
   }, [bookData])
 
+  // Auto-fill form when ISBN metadata is loaded
+  React.useEffect(() => {
+    if (isbnMetadata && isbnToLookup) {
+      const metadata = isbnMetadata as BookMetadata
+      
+      setFormData({
+        ...formData,
+        title: metadata.title || formData.title,
+        author: metadata.author || formData.author,
+        publishedYear: metadata.publishedYear || formData.publishedYear,
+        genre: metadata.genre || formData.genre,
+      })
+
+      if (metadata.coverUrl) {
+        setCoverPreviewUrl(metadata.coverUrl)
+      }
+      
+      toast.success("Book information retrieved successfully")
+      setIsbnToLookup(null) // Reset to allow future lookups
+    }
+  }, [isbnMetadata])
+
+  // Show error message when lookup fails
+  React.useEffect(() => {
+    if (isbnLookupFailed && isbnToLookup) {
+      toast.error("ISBN not found in OpenLibrary")
+      setIsbnToLookup(null) // Reset to allow retry
+    }
+  }, [isbnLookupFailed, isbnToLookup])
+
   const updateMutation = useMutation({
     ...updateBookMutation(),
     onSuccess: () => {
@@ -97,40 +134,14 @@ export function BookEditPage() {
     },
   })
 
-  const handleAutofill = async () => {
+  const handleAutofill = () => {
     if (!formData.isbn) {
       toast.error("Please enter an ISBN first")
       return
     }
-
-    setIsLookingUp(true)
-    try {
-      const result = await lookupBookByIsbn({
-        path: { isbn: formData.isbn }
-      })
-
-      const metadata = result.data as BookMetadata
-      
-      // Autofill form fields
-      setFormData({
-        ...formData,
-        title: metadata.title || formData.title,
-        author: metadata.author || formData.author,
-        publishedYear: metadata.publishedYear || formData.publishedYear,
-        genre: metadata.genre || formData.genre,
-      })
-
-      // Set cover preview if available
-      if (metadata.coverUrl) {
-        setCoverPreviewUrl(metadata.coverUrl)
-      }
-      
-      toast.success("Book information retrieved successfully")
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to lookup ISBN")
-    } finally {
-      setIsLookingUp(false)
-    }
+    
+    // Trigger the query by setting the ISBN
+    setIsbnToLookup(formData.isbn)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -171,35 +182,48 @@ export function BookEditPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-muted text-muted-foreground">
+      <AppLayout
+        breadcrumbs={[
+          { label: "Edit", href: `/books/${bookId}/edit` },
+        ]}
+        showBackButton
+      >
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 py-12">
+          <header className="space-y-3">
+            <div className="h-5 bg-muted animate-pulse w-32" />
+            <div className="h-8 bg-muted animate-pulse w-48" />
+            <div className="h-4 bg-muted animate-pulse w-64" />
+          </header>
+
+          <div className="h-px bg-border" />
+
           <Card>
-            <CardContent className="py-10 text-center text-sm text-muted-foreground">
-              Loading book...
+            <CardHeader>
+              <div className="h-6 bg-muted animate-pulse w-32" />
+              <div className="h-4 bg-muted animate-pulse w-48" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="h-8 bg-muted animate-pulse w-full" />
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="h-8 bg-muted animate-pulse w-full" />
+                <div className="h-8 bg-muted animate-pulse w-full" />
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="h-8 bg-muted animate-pulse w-full" />
+                <div className="h-8 bg-muted animate-pulse w-full" />
+              </div>
             </CardContent>
           </Card>
         </div>
-      </div>
+      </AppLayout>
     )
   }
 
   // Show access denied if not owner
   if (!isOwner) {
     return (
-      <div className="min-h-screen bg-muted text-muted-foreground">
+      <AppLayout showBackButton>
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 py-12">
-          <div className="flex items-center justify-between gap-3">
-            <Link to="/">
-              <Button variant="outline">
-                <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
-                Back to Catalog
-              </Button>
-            </Link>
-            <SignedIn>
-              <UserButton />
-            </SignedIn>
-          </div>
-
           <Card>
             <CardContent className="py-10 text-center">
               <div className="space-y-4">
@@ -218,27 +242,19 @@ export function BookEditPage() {
             </CardContent>
           </Card>
         </div>
-      </div>
+      </AppLayout>
     )
   }
 
   return (
-    <div className="min-h-screen bg-muted text-muted-foreground">
+    <AppLayout
+      breadcrumbs={[
+        { label: bookData.title, href: `/books/${bookId}` },
+        { label: "Edit", href: `/books/${bookId}/edit` },
+      ]}
+      showBackButton
+    >
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 py-12">
-        <div className="flex items-center justify-between gap-3">
-          <Link to="/">
-            <Button variant="outline">
-              <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
-              Back to Catalog
-            </Button>
-          </Link>
-          <SignedIn>
-            <UserButton />
-          </SignedIn>
-          <SignedOut>
-            <Badge variant="destructive">Sign in required</Badge>
-          </SignedOut>
-        </div>
 
         <header className="space-y-3">
           <Badge variant="secondary">Book Management</Badge>
@@ -436,7 +452,7 @@ export function BookEditPage() {
             </CardContent>
           </Card>
 
-          <DocumentList bookId={bookId} />
+          <DocumentList bookId={bookId} onDelete={handleDocumentUploadSuccess} />
         </SignedIn>
 
         <SignedOut>
@@ -447,6 +463,6 @@ export function BookEditPage() {
           </Card>
         </SignedOut>
       </div>
-    </div>
+    </AppLayout>
   )
 }

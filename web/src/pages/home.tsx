@@ -1,10 +1,4 @@
-import {
-  SignedIn,
-  SignedOut,
-  SignInButton,
-  SignUpButton,
-  UserButton,
-} from "@clerk/clerk-react"
+import { SignedIn } from "@clerk/clerk-react"
 import { Link } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import * as React from "react"
@@ -18,11 +12,10 @@ import type { Book } from "@/client/types.gen"
 import { BookCard } from "@/components/books/book-card"
 import { BookCardSkeleton } from "@/components/books/book-card-skeleton"
 import { BookDetailDialog } from "@/components/books/book-detail-dialog"
-import { Badge } from "@/components/ui/badge"
+import { AppLayout } from "@/components/layout/app-layout"
 import { Button } from "@/components/ui/button"
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -98,65 +91,28 @@ export function HomePage() {
     [activeItems, sortKey]
   )
   const total = activeQuery.data?.total ?? 0
-  const statusLabel = isDebouncing
-    ? "Typing..."
-    : activeQuery.isFetching
-      ? "Loading..."
-      : "Up to date"
   const errorMessage =
     activeQuery.error instanceof Error
       ? activeQuery.error.message
       : "Unable to load books right now."
 
   return (
-    <div className="min-h-screen bg-muted text-muted-foreground">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-12">
-        <div className="flex items-center justify-between gap-3">
+    <AppLayout>
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-12">
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-primary pb-2">
+              Chillguys present
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              A shared digital library · {total} {total === 1 ? "book" : "books"}
+            </p>
+          </div>
           <SignedIn>
             <Link to="/books/new">
               <Button>Create Book</Button>
             </Link>
           </SignedIn>
-          <div className="flex items-center gap-3 ml-auto">
-            <SignedOut>
-              <SignInButton mode="modal">
-                <Button variant="secondary">Sign in</Button>
-              </SignInButton>
-              <SignUpButton mode="modal">
-                <Button>Sign up</Button>
-              </SignUpButton>
-            </SignedOut>
-            <SignedIn>
-              <UserButton />
-            </SignedIn>
-          </div>
-        </div>
-
-        <header className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <div className="space-y-3">
-            <h2 className="p-0">Chillguys present</h2>
-            <h1 className="text-3xl font-semibold tracking-tight text-primary">
-              Bookshelf
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              Browse and contribuite to this shared library
-            </p>
-          </div>
-          <Card size="sm" className="w-full md:w-72">
-            <CardHeader>
-              <CardTitle>Catalog Status</CardTitle>
-              <CardDescription>Current total of titles</CardDescription>
-              <CardAction>
-                <Badge variant="secondary">{statusLabel}</Badge>
-              </CardAction>
-            </CardHeader>
-            <CardContent className="flex items-start">
-              <div>
-                <div className="text-muted-foreground text-xs">Total titles</div>
-                <div className="text-lg font-semibold">{total}</div>
-              </div>
-            </CardContent>
-          </Card>
         </header>
 
         <Card>
@@ -173,7 +129,7 @@ export function HomePage() {
                 <InputGroupAddon align="inline-start">Find</InputGroupAddon>
                 <InputGroupInput
                   id="search-books"
-                  placeholder="e.g. Ursula Le Guin"
+                  placeholder="e.g. The Fellowship of the Ring"
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                 />
@@ -228,26 +184,23 @@ export function HomePage() {
           </CardContent>
         </Card>
 
-        <div className="text-muted-foreground flex items-center justify-between text-xs">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div>
             {isSearching
               ? `Searching for "${normalizedSearch}"`
-              : activeQuery.isFetching
-                ? "Loading books..."
-                : `Showing ${books.length} of ${total} books`}
+              : `Showing ${books.length} of ${total} books`}
           </div>
           <div className="flex items-center gap-2">
-            <span
-              className={`h-2 w-2 rounded-full ${isDebouncing || activeQuery.isFetching
-                ? "bg-yellow-500 animate-pulse"
-                : "bg-primary"
-                }`}
-            />
+            {(isDebouncing || activeQuery.isFetching) &&
+              <div
+                className={`h-2 w-2 rounded-full bg-yellow-500 animate-pulse`}
+              />
+            }
             {isDebouncing
-              ? "Waiting for input..."
+              ? "Typing..."
               : activeQuery.isFetching
                 ? "Loading..."
-                : "All caught up!"}
+                : "Result loaded"}
           </div>
         </div>
 
@@ -291,6 +244,6 @@ export function HomePage() {
           }}
         />
       </div>
-    </div>
+    </AppLayout>
   )
 }

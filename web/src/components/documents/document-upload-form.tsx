@@ -190,7 +190,7 @@ export function DocumentUploadForm({
       )}
 
       {status === "success" && (
-        <div className="rounded-lg border border-green-600/20 bg-green-600/10 p-3">
+        <div className="border border-green-600/20 bg-green-600/10 p-3">
           <div className="flex items-center gap-2">
             <Badge variant="default" className="bg-green-600 hover:bg-green-600">
               ✓

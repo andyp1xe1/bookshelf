@@ -1,14 +1,12 @@
-import { SignedIn, SignedOut, UserButton } from "@clerk/clerk-react"
+import { SignedIn, SignedOut } from "@clerk/clerk-react"
 import { Link, useNavigate } from "@tanstack/react-router"
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import * as React from "react"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowLeft01Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 
-import { createBookMutation } from "@/client/@tanstack/react-query.gen"
-import { lookupBookByIsbn } from "@/client/sdk.gen"
+import { createBookMutation, lookupBookByIsbnOptions } from "@/client/@tanstack/react-query.gen"
 import type { BookCreate, BookMetadata, ContentType } from "@/client/types.gen"
+import { AppLayout } from "@/components/layout/app-layout"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -55,27 +53,21 @@ export function BookCreatePage() {
   const [documents, setDocuments] = React.useState<DocumentToUpload[]>([])
   const [createdBookId, setCreatedBookId] = React.useState<number | null>(null)
   const [coverPreviewUrl, setCoverPreviewUrl] = React.useState<string | null>(null)
-  const [isLookingUp, setIsLookingUp] = React.useState(false)
+  const [isbnToLookup, setIsbnToLookup] = React.useState<string | null>(null)
 
-  const createMutation = useMutation(createBookMutation())
-  const presignMutation = useMutation(createBookDocumentPresignMutation())
-  const completeMutation = useMutation(completeBookDocumentUploadMutation())
+  // Query for ISBN lookup - only runs when isbnToLookup is set
+  const { data: isbnMetadata, isLoading: isLookingUp, isError: isbnLookupFailed } = useQuery({
+    ...lookupBookByIsbnOptions({
+      path: { isbn: isbnToLookup! }
+    }),
+    enabled: !!isbnToLookup, // Only run when we have an ISBN to lookup
+  })
 
-  const handleAutofill = async () => {
-    if (!formData.isbn) {
-      toast.error("Please enter an ISBN first")
-      return
-    }
-
-    setIsLookingUp(true)
-    try {
-      const result = await lookupBookByIsbn({
-        path: { isbn: formData.isbn }
-      })
-
-      const metadata = result.data as BookMetadata
+  // Auto-fill form when ISBN metadata is loaded
+  React.useEffect(() => {
+    if (isbnMetadata && isbnToLookup) {
+      const metadata = isbnMetadata as BookMetadata
       
-      // Autofill form fields
       setFormData({
         ...formData,
         title: metadata.title || formData.title,
@@ -84,17 +76,35 @@ export function BookCreatePage() {
         genre: metadata.genre || formData.genre,
       })
 
-      // Set cover preview if available
       if (metadata.coverUrl) {
         setCoverPreviewUrl(metadata.coverUrl)
       }
       
       toast.success("Book information retrieved successfully")
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to lookup ISBN")
-    } finally {
-      setIsLookingUp(false)
+      setIsbnToLookup(null) // Reset to allow future lookups
     }
+  }, [isbnMetadata])
+
+  // Show error message when lookup fails
+  React.useEffect(() => {
+    if (isbnLookupFailed && isbnToLookup) {
+      toast.error("ISBN not found in OpenLibrary")
+      setIsbnToLookup(null) // Reset to allow retry
+    }
+  }, [isbnLookupFailed, isbnToLookup])
+
+  const createMutation = useMutation(createBookMutation())
+  const presignMutation = useMutation(createBookDocumentPresignMutation())
+  const completeMutation = useMutation(completeBookDocumentUploadMutation())
+
+  const handleAutofill = () => {
+    if (!formData.isbn) {
+      toast.error("Please enter an ISBN first")
+      return
+    }
+    
+    // Trigger the query by setting the ISBN
+    setIsbnToLookup(formData.isbn)
   }
 
   const handleAddFiles = (files: FileList | null) => {
@@ -282,22 +292,13 @@ export function BookCreatePage() {
   const failedCount = documents.filter((d) => d.status === "error").length
 
   return (
-    <div className="min-h-screen bg-muted text-muted-foreground">
+    <AppLayout
+      breadcrumbs={[
+        { label: "Create Book", href: "/books/new" },
+      ]}
+      showBackButton
+    >
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 py-12">
-        <div className="flex items-center justify-between gap-3">
-          <Link to="/">
-            <Button variant="outline">
-              <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
-              Back to Catalog
-            </Button>
-          </Link>
-          <SignedIn>
-            <UserButton />
-          </SignedIn>
-          <SignedOut>
-            <Badge variant="destructive">Sign in required</Badge>
-          </SignedOut>
-        </div>
 
         <header className="space-y-3">
           <Badge variant="secondary">Book Management</Badge>
@@ -596,6 +597,6 @@ export function BookCreatePage() {
           </Card>
         </SignedOut>
       </div>
-    </div>
+    </AppLayout>
   )
 }

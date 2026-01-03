@@ -30,10 +30,9 @@ export function BookCard({ book, onOpenDetail }: BookCardProps) {
 
   return (
     <Card size="sm" className="bg-background/80">
-
-      <button
+      <div
         onClick={handleCardClick}
-        className="w-full text-left transition-opacity hover:opacity-80"
+        className="w-full text-left transition-opacity hover:opacity-80 cursor-pointer"
       >
         <CardHeader>
           <div className="flex gap-4">
@@ -77,7 +76,7 @@ export function BookCard({ book, onOpenDetail }: BookCardProps) {
             </div>
           )}
         </CardFooter>
-      </button>
+      </div>
     </Card>
   )
 }
