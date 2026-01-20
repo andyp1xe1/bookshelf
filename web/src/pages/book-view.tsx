@@ -1,4 +1,4 @@
-import { useUser } from "@clerk/clerk-react";
+import { SignedIn, useUser } from "@clerk/clerk-react";
 import { Link, useParams, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -159,7 +159,9 @@ export function BookViewPage() {
                 </div>
               )}
             </div>
-            <DocumentList bookId={book.id} onDelete={isOwner ? handleDocumentDelete : undefined} />
+            <SignedIn>
+              <DocumentList bookId={book.id} onDelete={isOwner ? handleDocumentDelete : undefined} />
+            </SignedIn>
           </div>
         </div>
       </div>

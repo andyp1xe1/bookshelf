@@ -1,4 +1,4 @@
-import { useUser } from "@clerk/clerk-react"
+import { SignedIn, useUser } from "@clerk/clerk-react"
 import { Link } from "@tanstack/react-router"
 import { toast } from "sonner"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -87,13 +87,16 @@ export function BookDetailDialog({
 
           <Separator />
 
-          <div className="space-y-3">
-            <h3 className="font-semibold">Documents</h3>
+          <SignedIn>
+            <div className="space-y-3">
+              <h3 className="font-semibold">Documents</h3>
+              <DocumentList bookId={book.id} variant="compact" showCard={false} />
+            </div>
 
-            <DocumentList bookId={book.id} variant="compact" showCard={false} />
-          </div>
+            <Separator />
 
-          <Separator />
+          </SignedIn>
+
 
           <div className="flex flex-col sm:flex-row gap-2">
             <Link
